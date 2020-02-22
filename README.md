@@ -2,7 +2,9 @@
 Simple, Opinionated Message Schema
 
 
-## Types
+## AST Structure
+
+### Types
 - `boolean`
 - `int64`
 - `double`
@@ -12,7 +14,11 @@ Simple, Opinionated Message Schema
 
 All types are nullable except `Array`s, which may be zero-length.
 
-## Constants
+
+### Constants
+In principle these will be treated as closely as the target language allows to the platonic ideal of `static const` in
+the context of whichever containing structures they appear in.
+
 - name : `string`
   - Description: the name of the constant.
 - type : `boolean | int64 | double | string | UDT | Array<boolean | int64 | double | string | UDT>`
@@ -20,11 +26,8 @@ All types are nullable except `Array`s, which may be zero-length.
 - value: `string`
   - Description: the serialized form of the value of the constant.
 
-In principle these will be treated as closely as the target language allows to the platonic ideal of `static const` in
-the context of whichever containing structures they appear in.
-
  
-## Fields
+### Fields
 - name : `string`
   - Description: the name of the field.
 - type : `"boolean" | "int64" | "double" | "string" | <UDT-name> | "Array<" <boolean | int64 | double | string | UDT> ">"`
@@ -43,7 +46,7 @@ the context of whichever containing structures they appear in.
   - Default value: `null` for `boolean | int64 | double | string | UDT`, zero-length `Array` for `Array` types.
 
 
-## User-Defined Types (UDTs)
+### User-Defined Types (UDTs)
 - name : `string`
   - Description: the name of the UDT (i.e., the class name).
 - (optional) constants : `Array<Constant>`
@@ -54,12 +57,20 @@ the context of whichever containing structures they appear in.
   - Default value: zero-length `Array<Field>`.
 
 
-## Packages
+### Packages
 - name : `string`
-  - Description: the name of the package (or module, or namespace, or whatever makes most sense in the target language).
+  - Description: dot-delimited name of the package (or module, or namespace, or whatever makes most sense in the target language).
 - (optional) constants : `Array<Constant>`
   - Description: whatever `static const` things you want in the package.
   - Default value: zero-length `Array<Constant>`.
 - (optional) udts : `Array<UDT>`
   - Description: whatever `UDT`s you want in the package.
   - Default value: zero-length `Array<UDT>`
+
+
+### Specifications
+- packages: `Array<Package>`
+
+
+## File Formats
+soms uses the `.jsoms` file suffix, which is just JSON with the addition of comment lines denoted by `<whitespace characters>* "//" <your comment text>`.

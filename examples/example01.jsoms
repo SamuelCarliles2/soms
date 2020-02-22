@@ -1,0 +1,32 @@
+// example 01 jsoms file
+{
+    "packages": [
+        {
+            "name": "soms.examples.example01",
+            "constants": [
+                { "name": "C1", "type": "string", "value": "I AM A CONSTANT" }
+            ],
+            "udts": [
+                {
+                    "name": "HelloWorldMessage",
+                    "constants": [{ "name": "API_VERSION", "type": "string", "value": "0.0.1" }]
+                    "fields": [
+                        { "name": "message",      "type": "string" },
+                        { "name": "rank",         "type": "int64",  "optional": true },
+                        { "name": "serialNumber", "type": "string", "optional": true }
+                    ]
+                },
+                {
+                    "name": "MessageBag",
+                    "constants": [{ "name": "API_VERSION", "type": "string", "value": "0.0.1" }],
+                    "fields": [
+                        {
+                            "name": "messages",
+                            "type": "Array<HelloWorldMessage>"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
