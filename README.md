@@ -9,41 +9,45 @@ Simple, Opinionated Message Schema
 - `int64`
 - `double`
 - `string`
+- `Enum`
 - `user-defined type (UDT)`
-- `Array<boolean | int64 | double | string | UDT>`
+- `Array<boolean | int64 | double | string | Enum | UDT>`
 
-All types are nullable except `Array`s, which may be zero-length.
+All types are nullable except `Array`s, which may be zero-length. Enums are string-valued; for the purposes of message
+serialization, integer enums are a universal pain in the ass, nobody wants them, everybody hates them, and if you want
+them, you can do them as strings.
 
+
+### Enum
+- name: `string`
+- values: `Array<string>`
 
 ### Constants
 In principle these will be treated as closely as the target language allows to the platonic ideal of `static const` in
 the context of whichever containing structures they appear in.
 
 - name : `string`
-  - Description: the name of the constant.
-- type : `boolean | int64 | double | string | UDT | Array<boolean | int64 | double | string | UDT>`
-  - Description: the type of the constant.
-- value: `string`
+- type : `boolean | int64 | double | string | Enum | UDT | Array<boolean | int64 | double | string | Enum | UDT>`
+- value: `string | null`
   - Description: the serialized form of the value of the constant.
 
  
 ### Fields
 - name : `string`
-  - Description: the name of the field.
-- type : `"boolean" | "int64" | "double" | "string" | <UDT-name> | "Array<" <boolean | int64 | double | string | UDT> ">"`
-  - Description: the type of the field.
+- type :
+`"boolean" | "int64" | "double" | "string" | <Enum-name> | <UDT-name> | "Array<" <boolean | int64 | double | string | Enum | UDT> ">"`
 - (optional) position : `int64`
   - Description: the zero-indexed position of the field in its containing structure. 
   - Default value: the order in which the field is declared within its containing structure in the AST.
 - (optional) optional : `boolean`
   - Description: whether the field may be absent in serialized form.
-  Optional fields are implicitly assumed to be present and `default-value`d.
+  Optional fields are implicitly assumed to be present and `defaultValue`d.
   Deserialization must not require optional fields, but serialization must output them.
   The point of this is to balance ease of hand-writing objects with simplicity of serde implementation.
   - Default value: `false`
-- (optional) default-value : `boolean | int64 | double | string | UDT | Array<boolean | int64 | double | string | UDT>`
-  - Description: the default value to use for implicitly specified values.
-  - Default value: `null` for `boolean | int64 | double | string | UDT`, zero-length `Array` for `Array` types.
+- (optional) defaultValue : `string | null`
+  - Description: the serialized form of the default value to use for implicitly specified values.
+  - Default value: `null` for `boolean | int64 | double | string | Enum | UDT`, zero-length `Array` for `Array` types.
 
 
 ### User-Defined Types (UDTs)
@@ -60,6 +64,8 @@ the context of whichever containing structures they appear in.
 ### Packages
 - name : `string`
   - Description: dot-delimited name of the package (or module, or namespace, or whatever makes most sense in the target language).
+- (optional) enums : `Array<Enum>`
+  - Description: whatever `Enum`s you want in the package.
 - (optional) constants : `Array<Constant>`
   - Description: whatever `static const` things you want in the package.
   - Default value: zero-length `Array<Constant>`.
