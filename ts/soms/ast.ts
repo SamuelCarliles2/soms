@@ -1,10 +1,11 @@
 import {symlink} from "fs";
 
 
-export type SomsPrimitiveType = "boolean" | "int64" | "double" | "string";
+let int64 = Symbol("int64");
+let double = Symbol("double");
 
-export type SomsType<TypeContainer, T extends keyof TypeContainer>
-    = SomsPrimitiveType | SomsEnum | SomsUdt<TypeContainer, T> | T;
+export type SomsPrimitiveTypeName = "boolean" | "int64" | "double" | "string";
+export type SomsValueType = boolean | number | string | any | boolean[] | number[] | string[] | any[] | null;
 
 export interface SomsEnum {
     readonly name: string;
@@ -15,176 +16,154 @@ export class ConcreteSomsEnum implements SomsEnum {
     readonly name: string;
     readonly values: string[];
 
-    public static create(e: SomsEnum) : SomsEnum {
-        return new ConcreteSomsEnum(e);
-    }
-
-    protected constructor(e: SomsEnum) {
+    constructor(e: SomsEnum) {
         this.name = e.name;
         this.values = e.values;
     }
 }
 
 
-export interface SomsConstant<TypeContainer, T extends keyof TypeContainer> {
+export interface SomsConstant {
     readonly name: string;
-    readonly value: SomsType<TypeContainer, T> | SomsType<TypeContainer, T>[] | null;
+    readonly typeName: string;
+    readonly value: SomsValueType;
 }
 
-export class ConcreteSomsConstant<TypeContainer, T extends keyof TypeContainer>
-    implements SomsConstant<TypeContainer, T>
+export class ConcreteSomsConstant implements SomsConstant
 {
     readonly name: string;
-    readonly value: SomsType<TypeContainer, T> | SomsType<TypeContainer, T>[] | null;
+    readonly typeName: string;
+    readonly value: SomsValueType;
 
-    public static create<TypeContainer, T extends keyof TypeContainer>
-    (c: SomsConstant<TypeContainer, T>) : SomsConstant<TypeContainer, T>
-    {
-        return new ConcreteSomsConstant(c);
-    }
-
-    protected constructor(c: SomsConstant<TypeContainer, T>) {
+    constructor(c: SomsConstant) {
         this.name = c.name;
+        this.typeName = c.typeName;
         this.value = c.value;
     }
 }
 
 
-export interface WeakSomsField<TypeContainer, T extends keyof TypeContainer> {
+export interface WeakSomsField {
     readonly name: string;
+    readonly typeName: string;
     readonly position?: number;
     readonly optional?: boolean;
-    readonly defaultValue?: SomsType<TypeContainer, T> | SomsType<TypeContainer, T>[] | null;
+    readonly defaultValue?: SomsValueType;
 }
 
-export interface SomsField<TypeContainer, T extends keyof TypeContainer> extends WeakSomsField<TypeContainer, T> {
+export interface SomsField extends WeakSomsField {
     readonly name: string;
+    readonly typeName: string;
     readonly position: number;
     readonly optional: boolean;
-    readonly defaultValue: SomsType<TypeContainer, T> | SomsType<TypeContainer, T>[] | null;
+    readonly defaultValue: SomsValueType;
 }
 
-export interface WeakSomsSupplement<TypeContainer, T extends keyof TypeContainer> {
-    w: WeakSomsField<TypeContainer, T>;
-    defaults: SomsField<TypeContainer, T>;
-}
-
-export class ConcreteSomsField<TypeContainer, T extends keyof TypeContainer>
-    implements SomsField<TypeContainer, T>
+export class ConcreteSomsField implements SomsField
 {
     readonly name: string;
+    readonly typeName: string;
     readonly position: number;
     readonly optional: boolean;
-    readonly defaultValue: SomsType<TypeContainer, T> | SomsType<TypeContainer, T>[] | null;
+    readonly defaultValue: SomsValueType;
 
-    public static create<TypeContainer, T extends keyof TypeContainer>
-    (f : WeakSomsSupplement<TypeContainer, T> | SomsField<TypeContainer, T>)
-        : SomsField<TypeContainer, T>
+    constructor(f : [WeakSomsField, SomsField] | SomsField)
     {
-        return this.isSomsField(f)
-        ? new ConcreteSomsField(f)
-            : new ConcreteSomsField(
-            {
-                name: f.w.name,
-                position: f.w.position ? f.w.position : f.defaults.position,
-                optional: f.w.optional ? f.w.optional : f.defaults.optional,
-                defaultValue: f.w.defaultValue ? f.w.defaultValue : f.defaults.defaultValue
-            }
-        );
+        if(ConcreteSomsField.isSomsField(f)) {
+            this.name = f.name;
+            this.typeName = f.typeName;
+            this.position = f.position;
+            this.optional = f.optional;
+            this.defaultValue = f.defaultValue;
+        }
+        else {
+            this.name = f[0].name;
+            this.typeName = f[0].typeName;
+            this.position = f[0].position ? f[0].position : f[1].position;
+            this.optional = f[0].optional ? f[0].optional : f[1].optional;
+            this.defaultValue = f[0].defaultValue ? f[0].defaultValue : f[1].defaultValue;
+        }
     }
 
-    protected static isSomsField<TypeContainer, T extends keyof TypeContainer>
-    (f: WeakSomsSupplement<TypeContainer, T> | SomsField<TypeContainer, T>)
-        : f is SomsField<TypeContainer, T>
+    static isSomsField(f: [WeakSomsField, SomsField] | WeakSomsField | SomsField) : f is SomsField
     {
         return 'name' in f
+            && 'typeName' in f
             && 'position' in f
             && 'optional' in f
             && 'defaultValue' in f;
     }
-
-    protected constructor(f: SomsField<TypeContainer, T>)
-    {
-        this.name = f.name;
-        this.position = f.position;
-        this.optional = f.optional;
-        this.defaultValue = f.defaultValue;
-    }
 }
 
 
-export interface SomsUdt<TypeContainer, T extends keyof TypeContainer> {
+export interface WeakSomsUdt {
     readonly name: string,
-    readonly constants: SomsConstant<TypeContainer, T>[],
-    readonly fields: SomsField<TypeContainer, T>[]
+    readonly constants: SomsConstant[],
+    readonly fields: WeakSomsField[]
 }
 
-export class ConcreteSomsUdt<TypeContainer, T extends keyof TypeContainer>
-    implements SomsUdt<TypeContainer, T>
+export interface SomsUdt {
+    readonly name: string,
+    readonly constants: SomsConstant[],
+    readonly fields: SomsField[]
+}
+
+export class ConcreteSomsUdt implements SomsUdt
 {
     readonly name: string;
-    readonly constants: SomsConstant<TypeContainer, T>[];
-    readonly fields: SomsField<TypeContainer, T>[];
+    readonly constants: SomsConstant[];
+    readonly fields: SomsField[];
 
-    static create<TypeContainer, T extends keyof TypeContainer>
-    (u: SomsUdt<TypeContainer, T>) : SomsUdt<TypeContainer, T>
-    {
-        return new ConcreteSomsUdt(u);
-    }
-
-    protected constructor(u: SomsUdt<TypeContainer, T>)
+    constructor(u: WeakSomsUdt | SomsUdt)
     {
         this.name = u.name;
         this.constants = u.constants;
-        this.fields = u.fields;
+        this.fields = [];
+        // this.fields = u.fields;
     }
 }
 
 
-export interface SomsPackage<TypeContainer, T extends keyof TypeContainer> {
-    readonly name: string;
-    readonly constants: SomsConstant<TypeContainer, T>[],
-    readonly udts: SomsUdt<TypeContainer, T>[]
-}
-
-export class ConcreteSomsPackage<TypeContainer, T extends keyof TypeContainer>
-    implements SomsPackage<TypeContainer, T>
-{
-    readonly name: string;
-    readonly constants: SomsConstant<TypeContainer, T>[];
-    readonly udts: SomsUdt<TypeContainer, T>[];
-
-    static create<TypeContainer, T extends keyof TypeContainer>
-    (p: SomsPackage<TypeContainer, T>) : SomsPackage<TypeContainer, T>
-    {
-        return new ConcreteSomsPackage(p);
-    }
-
-    protected constructor(p: SomsPackage<TypeContainer, T>)
-    {
-        this.name = p.name;
-        this.constants = p.constants;
-        this.udts = p.udts;
-    }
-}
-
-
-export interface SomsSpecification<TypeContainer, T extends keyof TypeContainer> {
-    readonly packages: SomsPackage<TypeContainer, T>[];
-}
-
-export class ConcreteSomsSpecification<TypeContainer, T extends keyof TypeContainer>
-    implements SomsSpecification<TypeContainer, T>
-{
-    readonly packages: SomsPackage<TypeContainer, T>[];
-
-    static create<TypeContainer, T extends keyof TypeContainer>
-    (s: SomsSpecification<TypeContainer, T>)
-    {
-        return new ConcreteSomsSpecification(s);
-    }
-
-    protected constructor(s: SomsSpecification<TypeContainer, T>) {
-        this.packages = s.packages.map(p => ConcreteSomsPackage.create(p));
-    }
-}
+// export interface SomsPackage {
+//     readonly name: string;
+//     readonly constants: SomsConstant<TypeContainer, T>[],
+//     readonly udts: SomsUdt<TypeContainer, T>[]
+// }
+//
+// export class ConcreteSomsPackage implements SomsPackage
+// {
+//     readonly name: string;
+//     readonly constants: SomsConstant<TypeContainer, T>[];
+//     readonly udts: SomsUdt<TypeContainer, T>[];
+//
+//     static create(p: SomsPackage) : SomsPackage
+//     {
+//         return new ConcreteSomsPackage(p);
+//     }
+//
+//     protected constructor(p: SomsPackage)
+//     {
+//         this.name = p.name;
+//         this.constants = p.constants;
+//         this.udts = p.udts;
+//     }
+// }
+//
+//
+// export interface SomsSpecification {
+//     readonly packages: SomsPackage[];
+// }
+//
+// export class ConcreteSomsSpecification implements SomsSpecification
+// {
+//     readonly packages: SomsPackage[];
+//
+//     static create(s: SomsSpecification)
+//     {
+//         return new ConcreteSomsSpecification(s);
+//     }
+//
+//     protected constructor(s: SomsSpecification) {
+//         this.packages = s.packages.map(p => ConcreteSomsPackage.create(p));
+//     }
+// }
