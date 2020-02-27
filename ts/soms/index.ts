@@ -1,130 +1,163 @@
-import * as ts from "typescript";
-import {Modifier, SyntaxKind, Token} from "typescript";
+import * as fs from "fs";
+import * as ts from "@typescript-eslint/parser";
+import {AST_NODE_TYPES, TSESTree} from "@typescript-eslint/typescript-estree";
+
+import * as somstree from "./somstree";
 
 
-// mostly cribbed and hacked from
-// https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API
+export interface SourceSource {
+    source: string;
+    filename: string | null;
+}
+
 export class Somspiler {
-    protected readonly program: ts.Program;
-    protected readonly checker: ts.TypeChecker;
+    readonly sources: SourceSource[];
 
-    constructor(argv: string[]) {
-        this.program = ts.createProgram(argv, {});
-        this.checker = this.program.getTypeChecker();
+    constructor(sources: SourceSource[]) {
+        this.sources = sources;
     }
 
-    foo(): void {
-        // Visit every sourceFile in the program
-        for (const sourceFile of this.program.getSourceFiles()) {
-            // SourceFile.isDeclarationFile seems to indicate whether it's in the project or it's in node_modules
-            if (!sourceFile.isDeclarationFile) {
-                ts.forEachChild(
-                    sourceFile,
-                    (n) => {
-                        return this.visit(n, true);
-                    }
-                );
+    foo() : void {
+        for(let s of this.sources) {
+            console.log("***** PARSING " + s.filename + " *****");
+            let prog: TSESTree.Program = <TSESTree.Program>ts.parse(s.source);
+            Somspiler.handleProgram(prog);
+            // console.log(typeof t);
+            // console.log(JSON.stringify(ts.parse(s.source), null, "    "));
+        }
+    }
+
+    static handleProgram(p: TSESTree.Program) : any {
+        for(let s of p.body) {
+            // s will be a TSESTree.Statement
+            if(s.type === AST_NODE_TYPES.ExportNamedDeclaration) {
+                if(s.declaration) {
+                    let r = Somspiler.handleExportDeclaration(s.declaration);
+
+                    console.log("r: " + JSON.stringify(r, null, "  "));
+                }
+                else {
+                    throw new Error("Don't know what to do with null declaration in type " + s.type);
+                }
+            }
+            else {
+                throw new Error("Don't know what to do with Statement of type " + s.type);
             }
         }
     }
 
-    protected handleClass(node: ts.Node) {
-    }
+    static handleExportDeclaration(d: TSESTree.ExportDeclaration) : somstree.SomsEnum | somstree.SomsClass {
+        let result;
 
-    visit(node: ts.Node, onlyExported?: boolean) {
-        // Only consider exported nodes
-        if (onlyExported && !Somspiler.isNodeExported(node)) {
-            return;
+        switch(d.type) {
+            case AST_NODE_TYPES.ClassDeclaration:
+                result = Somspiler.handleClassDeclaration(d);
+                break;
+            case AST_NODE_TYPES.TSEnumDeclaration:
+                result = Somspiler.handleTSEnumDeclaration(d);
+                break;
+            default:
+                throw new Error("Don't know what to do with declaration of type " + d.type);
         }
 
-        if (ts.isClassDeclaration(node) && node.name) {
-            console.log("***** CLASS *****");
-            // This is a top level class, get its symbol
-            let symbol = this.checker.getSymbolAtLocation(node.name);
-            if (symbol) {
-                console.log(JSON.stringify(this.serializeClass(symbol)));
-            }
-
-            ts.forEachChild(node, this.visit);
-        } else if (ts.isModuleDeclaration(node)) {
-            // This is a namespace, visit its children
-            ts.forEachChild(node, this.visit);
-        } else if (ts.isPropertyDeclaration(node)) {
-            console.log("***** PROPERTY *****");
-            let symbol = this.checker.getSymbolAtLocation(node.name);
-            if (node.modifiers && node.modifiers.length > 0) {
-                console.log("modifiers: ");
-                node.modifiers.forEach((v, i, a) => {
-                    console.log(
-                        "[" + i + "]: "
-                        + (Somspiler.isStatic(v) ? "static " : "")
-                        + (Somspiler.isReadonly(v) ? "readonly" : "")
-                    );
-                });
-            }
-
-            if (symbol) {
-                console.log(JSON.stringify(this.serializeSymbol(symbol)));
-            }
-        } else if (ts.isEnumDeclaration(node)) {
-            console.log("***** ENUM *****");
-            let symbol = this.checker.getSymbolAtLocation(node.name);
-            if (symbol) {
-                console.log(JSON.stringify(this.serializeSymbol(symbol)));
-            }
-        }
+        return result;
     }
 
-    /** Serialize a class symbol information */
-    serializeClass(symbol: ts.Symbol) {
-        let details = this.serializeSymbol(symbol);
+    static handleClassDeclaration(s: TSESTree.ClassDeclaration) : somstree.SomsClass {
+        if(!s.id?.name) {
+            throw new Error("No name for class: " + s.id);
+        }
 
-        // Get the construct signatures
-        let constructorType = this.checker.getTypeOfSymbolAtLocation(
-            symbol,
-            symbol.valueDeclaration!
+        return new somstree.SomsClass(
+            {
+                name: s.id?.name
+            }
         );
-        details.constructors = constructorType
-        .getConstructSignatures()
-        .map(this.serializeSignature);
-        return details;
     }
 
-    /** Serialize a signature (call or construct) */
-    serializeSignature(signature: ts.Signature) {
-        return {
-            parameters: signature.parameters.map(this.serializeSymbol),
-            returnType: this.checker.typeToString(signature.getReturnType()),
-            documentation: ts.displayPartsToString(signature.getDocumentationComment(this.checker))
-        };
+    static handleClassBody(b: TSESTree.ClassBody) : any {
+        for(let e of b.body) {
+        }
     }
 
-    /** Serialize a symbol into a json object */
-    serializeSymbol(symbol: ts.Symbol): any {
-        return {
-            name: symbol.getName(),
-            flags: symbol.flags.toString(),
-            type: this.checker.typeToString(
-                this.checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration!)
+    static handleClassElement(e: TSESTree.ClassElement) : somstree.SomsField {
+        if(e.type === AST_NODE_TYPES.ClassProperty) {
+            return Somspiler.handleClassProperty(e);
+        }
+        else {
+            throw new Error("Don't know what to do with class element type " + e.type);
+        }
+    }
+
+    static handleClassProperty(p: TSESTree.ClassProperty) : somstree.SomsField {
+        throw new Error("Here's p: " + JSON.stringify(p, null, "  "));
+
+        if((!p.computed) && p.static && p.readonly) {
+        }
+        else if((!p.computed) && (!p.static) && (!p.readonly)) {
+
+        }
+        else {
+            throw new Error("Don't know what to do with class element type " + p.type);
+        }
+    }
+
+    static handleExpression(e: TSESTree.Expression) : string | number {
+        let result: string | number;
+
+        switch (e.type) {
+            case AST_NODE_TYPES.Identifier:
+                result = (<TSESTree.Identifier>e).name;
+                break;
+            // case AST_NODE_TYPES.Literal:
+            //     result = (<TSESTree.Literal>e).value;
+            //     break;
+            default:
+                throw new Error("Don't know what to do with expression " + e);
+        }
+
+        return result;
+    }
+
+    static handleTSEnumDeclaration(s: TSESTree.TSEnumDeclaration) : somstree.SomsEnum {
+        return new somstree.SomsEnum(
+            {
+                name: s.id.name,
+                values: s.members.map(
+                    m => {
+                        if(m.computed) {
+                            throw new Error("Encountered enum expression: " + s.id);
+                        }
+
+                        return m.id.toString();
+                    }
+                )
+            }
+        );
+    }
+
+    static fromFiles(filenames: string[]) : Somspiler {
+        return new Somspiler(
+            filenames.map(
+                f => <SourceSource>{
+                    source: fs.readFileSync(f).toString(),
+                    filename: f
+                }
             )
-        };
+        );
     }
 
-    protected static isStatic(m: Modifier): m is Token<SyntaxKind.StaticKeyword> {
-        return m.kind === SyntaxKind.StaticKeyword;
-    }
-
-    protected static isReadonly(m: Modifier): m is Token<SyntaxKind.ReadonlyKeyword> {
-        return m.kind === SyntaxKind.ReadonlyKeyword;
-    }
-
-    /** True if this is visible outside this file, false otherwise */
-    protected static isNodeExported(node: ts.Node): boolean {
-        return (
-            (ts.getCombinedModifierFlags(node as ts.Declaration) & ts.ModifierFlags.Export) !== 0 ||
-            (!!node.parent && node.parent.kind === ts.SyntaxKind.SourceFile)
+    static fromSources(sourceStrings: string[]) : Somspiler {
+        return new Somspiler(
+            sourceStrings.map(
+                s => <SourceSource>{
+                    source: s,
+                    filename: null
+                }
+            )
         );
     }
 }
 
-new Somspiler(process.argv);
+
+Somspiler.fromFiles(process.argv.slice(2)).foo();

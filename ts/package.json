@@ -11,8 +11,11 @@
   "author": "Samuel Carliles",
   "license": "MIT",
   "dependencies": {
+    "eslint": "6.8.0",
     "node": "12.16.0",
-    "typescript": "3.8.2"
+    "typescript": "3.8.2",
+    "@typescript-eslint/parser": "2.21.0",
+    "@typescript-eslint/typescript-estree": "2.21.0"
   },
   "devDependencies": {
     "@types/node": "12.12.6"
