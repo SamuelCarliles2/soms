@@ -1,4 +1,28 @@
-export type SomsTypeIdentifier = string;
+export type SomsPrimitiveType = "boolean" | "int64" | "double" | "string";
+
+const SomsPrimitiveTypeList : any = {
+    boolean: 0,
+    int64: 1,
+    double: 2,
+    string: 3
+};
+
+export function isSomsPrimitiveType(t: SomsPrimitiveType | string) : t is SomsPrimitiveType {
+    return t in SomsPrimitiveTypeList;
+}
+
+export interface SomsEnumOrClassIdentifier {
+    readonly name: string;
+}
+
+export type SomsTypeIdentifier = SomsPrimitiveType | SomsEnumOrClassIdentifier;
+
+export interface SomsEnumValueReference {
+    readonly enumName: string;
+    readonly value: string;
+}
+
+export type SomsValue = boolean | number | string | SomsEnumValueReference;
 
 export enum SomsNodeType {
     SOMSENUM = "SOMSENUM",
@@ -29,18 +53,23 @@ export class SomsField implements SomsTreeNode {
 
     readonly name: string;
     readonly typeIdentifier: SomsTypeIdentifier;
+    readonly dimensionality: number;
     readonly optional: boolean;
     readonly staticConst: boolean;
-    readonly staticConstValue: any;
-    readonly position: number | null;
+    readonly staticConstValue: SomsValue | null;
 
     constructor(f: WeakSomsField) {
         this.name = f.name;
         this.typeIdentifier = f.typeIdentifier;
+        this.dimensionality = f.dimensionality ? f.dimensionality : 0;
         this.optional = f.optional ? f.optional : false;
         this.staticConst = f.staticConst ? f.staticConst : false;
-        this.staticConstValue = f.staticConstValue ? f.staticConstValue : null;
-        this.position = f.position ? f.position : null;
+
+        this.staticConstValue = (
+            "staticConstValue" in f && !(f.staticConstValue === null || f.staticConstValue === undefined)
+        )
+            ? f.staticConstValue
+            : null;
     }
 }
 
@@ -79,10 +108,10 @@ export interface WeakSomsEnum {
 export interface WeakSomsField {
     readonly name: string;
     readonly typeIdentifier: SomsTypeIdentifier;
+    readonly dimensionality?: number;
     readonly optional?: boolean;
     readonly staticConst?: boolean;
-    readonly staticConstValue?: any;
-    readonly position?: number;
+    readonly staticConstValue?: SomsValue;
 }
 
 export interface WeakSomsClass {
