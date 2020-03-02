@@ -1,4 +1,10 @@
-export type SomsPrimitiveType = "boolean" | "int64" | "double" | "string";
+export type SomsNumberType = "int64" | "double";
+export type SomsPrimitiveType = SomsNumberType | "boolean" | "string";
+
+const SomsNumberTypeList : any = {
+    int64: 0,
+    double: 1
+};
 
 const SomsPrimitiveTypeList : any = {
     boolean: 0,
@@ -6,6 +12,12 @@ const SomsPrimitiveTypeList : any = {
     double: 2,
     string: 3
 };
+
+export function isSomsNumberType(t: SomsTypeIdentifier | string)
+    : t is SomsNumberType
+{
+    return t in SomsNumberTypeList;
+}
 
 export function isSomsPrimitiveType(t: SomsTypeIdentifier | string)
     : t is SomsPrimitiveType
@@ -30,7 +42,30 @@ export interface SomsEnumValueReference {
     readonly value: string;
 }
 
-export type SomsValue = boolean | number | string | SomsEnumValueReference;
+export type SomsPrimitiveValue = boolean | number | string;
+export type SomsValue = SomsPrimitiveValue | SomsEnumValueReference;
+
+export function isSomsPrimitiveValue(v: SomsValue) : v is SomsPrimitiveValue {
+    return typeof v in ["boolean", "number", "string"];
+}
+
+export function isBoolean(v: boolean | number | string | RegExp | null)
+: v is boolean
+{
+    return typeof v === "boolean";
+}
+
+export function isNumber(v: boolean | number | string | RegExp | null)
+: v is number
+{
+    return typeof v === "number";
+}
+
+export function isString(v: boolean | number | string | RegExp | null)
+: v is string
+{
+    return typeof v === "string";
+}
 
 export enum SomsNodeType {
     SOMSENUM = "SOMSENUM",
@@ -50,7 +85,7 @@ export class SomsEnum implements SomsTreeNode {
     readonly name: string;
     readonly values: string[];
 
-    constructor(e: WeakSomsEnum) {
+    constructor(e: SomsEnumLite) {
         this.name = e.name;
         this.values = e.values;
     }
@@ -66,7 +101,7 @@ export class SomsField implements SomsTreeNode {
     readonly staticConst: boolean;
     readonly staticConstValue: SomsValue | null;
 
-    constructor(f: WeakSomsField) {
+    constructor(f: SomsFieldLite) {
         this.name = f.name;
         this.typeIdentifier = f.typeIdentifier;
         this.dimensionality = f.dimensionality ? f.dimensionality : 0;
@@ -89,7 +124,7 @@ export class SomsClass implements SomsTreeNode {
     readonly name: string;
     readonly fields: SomsField[];
 
-    constructor(c: WeakSomsClass) {
+    constructor(c: SomsClassLite) {
         this.name = c.name;
         this.fields = c.fields ? c.fields : [];
     }
@@ -102,7 +137,7 @@ export class SomsPackage implements SomsTreeNode {
     readonly enums: SomsEnum[];
     readonly classes: SomsClass[];
 
-    constructor(p: WeakSomsPackage) {
+    constructor(p: SomsPackageLite) {
         this.name = p.name;
         this.enums = p.enums ? p.enums : [];
         this.classes = p.classes ? p.classes : [];
@@ -110,12 +145,12 @@ export class SomsPackage implements SomsTreeNode {
 }
 
 
-export interface WeakSomsEnum {
+export interface SomsEnumLite {
     readonly name: string;
     readonly values: string[];
 }
 
-export interface WeakSomsField {
+export interface SomsFieldLite {
     readonly name: string;
     readonly typeIdentifier: SomsTypeIdentifier;
     readonly dimensionality?: number;
@@ -124,12 +159,12 @@ export interface WeakSomsField {
     readonly staticConstValue?: SomsValue;
 }
 
-export interface WeakSomsClass {
+export interface SomsClassLite {
     readonly name: string;
     readonly fields?: SomsField[];
 }
 
-export interface WeakSomsPackage {
+export interface SomsPackageLite {
     readonly name: string;
     readonly enums?: SomsEnum[];
     readonly classes?: SomsClass[];

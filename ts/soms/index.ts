@@ -1,13 +1,21 @@
 import * as fs from "fs";
 
-import {SomsConfig, Somspiler} from "./somspiler";
+import {ConcreteSomsConfig, SomsConfig, Somspiler} from "./somspiler";
+import {TsGenerator} from "./generators/tsgen";
 
 
-Somspiler
-.fromConfig(
+const cfg = new ConcreteSomsConfig(
     <SomsConfig>JSON.parse(
         fs.readFileSync("./somsconfig.json").toString()
     )
-)
-.somspile()
-.map(p => { console.log(JSON.stringify(p, null, "  ")); });
+);
+
+new TsGenerator()
+.generate(Somspiler.fromConfig(cfg).somspile())
+.map(
+    s => {
+        const dirName = (cfg.outDir + "/" + s.filename).replace(new RegExp("/[^/]+$"), "");
+        fs.mkdirSync(dirName, { recursive: true });
+        fs.writeFileSync(cfg.outDir + "/" + s.filename, s.source);
+    }
+);

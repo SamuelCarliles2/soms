@@ -3,34 +3,19 @@ import * as ts from "@typescript-eslint/parser";
 import {AST_NODE_TYPES, TSESTree} from "@typescript-eslint/typescript-estree";
 
 import {
+    isBoolean, isNumber, isString,
     isSomsEnumOrClassIdentifier, isSomsPrimitiveType,
     SomsClass, SomsEnum, SomsField, SomsNodeType, SomsPackage,
-    SomsTypeIdentifier, SomsValue, WeakSomsField
+    SomsTypeIdentifier, SomsValue, SomsFieldLite
 } from "./somstree";
 
+import {FileSource, PackageSource} from "./somsgenerator";
 
-export interface SomsGenerator {
-    gen(packages: SomsPackage[]) : FileSource[];
-}
 
 export interface SomsConfig {
     readonly packageRoot?: string;
     readonly outDir?: string;
     readonly generatorModuleNames?: string[];
-}
-
-export interface Source {
-    readonly source: string;
-}
-
-export interface PackageSource extends Source {
-    readonly source: string;
-    readonly packageName: string;
-}
-
-export interface FileSource extends Source {
-    readonly source: string;
-    readonly filename: string;
 }
 
 export class Somspiler {
@@ -191,33 +176,15 @@ export class Somspiler {
         ];
     }
 
-    static isBoolean(v: boolean | number | string | RegExp | null)
-        : v is boolean
-    {
-        return typeof v === "boolean";
-    }
-
-    static isNumber(v: boolean | number | string | RegExp | null)
-        : v is number
-    {
-        return typeof v === "number";
-    }
-
-    static isString(v: boolean | number | string | RegExp | null)
-        : v is string
-    {
-        return typeof v === "string";
-    }
-
     static handleLiteral(l: TSESTree.Literal) : [SomsTypeIdentifier, SomsValue]
     {
-        if(Somspiler.isBoolean(l.value)) {
+        if(isBoolean(l.value)) {
             return ["boolean", l.value];
         }
-        else if(Somspiler.isString(l.value)) {
+        else if(isString(l.value)) {
             return ["string", l.value];
         }
-        else if(Somspiler.isNumber(l.value) && l.raw) {
+        else if(isNumber(l.value) && l.raw) {
             return [l.raw.indexOf(".") >= 0 ? "double" : "int64", l.value];
         }
         else {
@@ -287,7 +254,7 @@ export class Somspiler {
         }
     }
 
-    static handleTypeNode(n: TSESTree.TypeNode) : WeakSomsField {
+    static handleTypeNode(n: TSESTree.TypeNode) : SomsFieldLite {
         switch (n.type) {
             case AST_NODE_TYPES.TSArrayType:
                 return Somspiler.handleArrayType(n);
@@ -314,7 +281,7 @@ export class Somspiler {
     }
 
     static handleArrayType(t: TSESTree.TSArrayType, depth?: number)
-        : WeakSomsField
+        : SomsFieldLite
     {
         let d : number = depth ? depth : 0;
 
@@ -412,11 +379,11 @@ function findSoms(curDir: string) : string[] {
     );
 }
 
-function toJson(v: any) {
+export function toJson(v: any) {
     return JSON.stringify(v, null, "  ");
 }
 
-class ConcreteSomsConfig implements SomsConfig {
+export class ConcreteSomsConfig implements SomsConfig {
     readonly packageRoot: string;
     readonly outDir: string;
     readonly generatorModuleNames: string[];

@@ -53,7 +53,7 @@ export class Fooglar {
 
     // THIS ALL WORKS
     name: string;
-    yearOfBirth: int64;
+    yearOfBirth?: int64;
     fooglarType: FooglarType;
     heightInKm: double;
     aliases: string[];
