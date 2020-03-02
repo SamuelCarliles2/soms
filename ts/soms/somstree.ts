@@ -7,8 +7,16 @@ const SomsPrimitiveTypeList : any = {
     string: 3
 };
 
-export function isSomsPrimitiveType(t: SomsPrimitiveType | string) : t is SomsPrimitiveType {
+export function isSomsPrimitiveType(t: SomsTypeIdentifier | string)
+    : t is SomsPrimitiveType
+{
     return t in SomsPrimitiveTypeList;
+}
+
+export function isSomsEnumOrClassIdentifier(t: SomsTypeIdentifier)
+    : t is SomsEnumOrClassIdentifier
+{
+    return t && !isSomsPrimitiveType(t) && "name" in t;
 }
 
 export interface SomsEnumOrClassIdentifier {
@@ -66,7 +74,9 @@ export class SomsField implements SomsTreeNode {
         this.staticConst = f.staticConst ? f.staticConst : false;
 
         this.staticConstValue = (
-            "staticConstValue" in f && !(f.staticConstValue === null || f.staticConstValue === undefined)
+            "staticConstValue" in f
+            && f.staticConstValue !== null
+            && f.staticConstValue !== undefined
         )
             ? f.staticConstValue
             : null;
