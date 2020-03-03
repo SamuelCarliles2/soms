@@ -1,7 +1,0 @@
-{
-  "packageRoot": "./examples",
-  "outDir": "./out",
-  "generatorModuleNames": [
-    "ts"
-  ]
-}

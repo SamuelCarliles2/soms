@@ -1,0 +1,7 @@
+{
+  "packageRoot": "./soms",
+  "outDir": "./out/ts",
+  "generatorModuleNames": [
+    "ts"
+  ]
+}

@@ -1,3 +1,4 @@
 .idea
 ts/dist
 ts/node_modules
+examples/node_modules

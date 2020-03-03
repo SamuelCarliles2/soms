@@ -1,0 +1,10 @@
+{
+  "name": "soms-examples",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "node node_modules/soms/index.js"
+  },
+  "dependencies": {
+    "soms": "file:../ts/dist/soms"
+  }
+}
