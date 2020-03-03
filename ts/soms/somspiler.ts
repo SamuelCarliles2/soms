@@ -3,10 +3,9 @@ import * as ts from "@typescript-eslint/parser";
 import {AST_NODE_TYPES, TSESTree} from "@typescript-eslint/typescript-estree";
 
 import {
-    isBoolean, isNumber, isString,
-    isSomsEnumOrClassIdentifier, isSomsPrimitiveType,
-    SomsClass, SomsEnum, SomsField, SomsNodeType, SomsPackage,
-    SomsTypeIdentifier, SomsValue, SomsFieldLite
+    isSomsPrimitiveType, isSomsEnumOrClassIdentifier,
+    SomsNodeType, SomsPackage, SomsClass, SomsEnum,
+    SomsField, SomsFieldLite, SomsTypeIdentifier, SomsValue, SomsUdtType
 } from "./somstree";
 
 import {FileSource, PackageSource} from "./somsgenerator";
@@ -80,39 +79,98 @@ export class Somspiler {
             }
         }
 
-        const result = new SomsPackage(
+        return Somspiler.resolveUdts(
+            new SomsPackage(
+                {
+                    name: packageName,
+                    enums: enums,
+                    classes: classes
+                }
+            )
+        );
+    }
+
+    static checkUnique(enumNames: string[], classNames: string[]) : void {
+        let h: any = {};
+
+        for(let e of enumNames) {
+            if(e in h) {
+                throw new Error("Enum name already in use: " + e);
+            }
+            else {
+                h[e] = 1;
+            }
+        }
+
+        for(let c of classNames) {
+            if(c in h) {
+                throw new Error("Class name already in use: " + c);
+            }
+            else {
+                h[c] = 1;
+            }
+        }
+
+        return;
+    }
+
+    static resolveUdts(p: SomsPackage) : SomsPackage {
+        const enumNames = p.enums.map(e => e.name);
+        const classNames = p.classes.map(c => c.name);
+
+        this.checkUnique(enumNames, classNames);
+
+        const classes = p.classes.map(
+            c => new SomsClass(
+                {
+                    name: c.name,
+                    fields: c.fields.map(
+                        f => {
+                            if(isSomsEnumOrClassIdentifier(f.typeIdentifier)) {
+                                const udtType = enumNames.indexOf(f.typeIdentifier.name) >= 0
+                                    ? SomsUdtType.SOMSENUM
+                                    : (
+                                        classNames.indexOf(f.typeIdentifier.name) >= 0
+                                        ? SomsUdtType.SOMSCLASS
+                                            : null
+                                    );
+
+                                if(udtType === null) {
+                                    throw new Error(
+                                        "Unresolved type " + f.typeIdentifier.name
+                                        + " encountered in field " + f.name
+                                        + " in class " + c.name
+                                    );
+                                }
+
+                                return new SomsField(
+                                    {
+                                        name: f.name,
+                                        typeIdentifier: f.typeIdentifier,
+                                        udtType: udtType,
+                                        dimensionality: f.dimensionality,
+                                        optional: f.optional,
+                                        staticConst: f.staticConst,
+                                        staticConstValue: f.staticConstValue
+                                    }
+                                );
+                            }
+                            else {
+                                return f;
+                            }
+                        }
+                    )
+                }
+            )
+        );
+
+        return new SomsPackage(
             {
-                name: packageName,
-                enums: enums,
+                name: p.name,
+                enums: p.enums,
                 classes: classes
             }
         );
-
-        Somspiler.checkTypeReferenceResolution(result);
-
-        return result;
-    }
-
-    static checkTypeReferenceResolution(p: SomsPackage) : void {
-        const names
-            = p.enums.map(e => e.name).concat(p.classes.map(c => c.name));
-
-        for(let c of p.classes) {
-            for(let f of c.fields) {
-                let t = f.typeIdentifier;
-
-                if(
-                    isSomsEnumOrClassIdentifier(t)
-                    && names.indexOf(t.name) < 0
-                ) {
-                    throw new Error(
-                        "Found unresolved type \"" + t.name
-                        + "\" in field \"" + f.name
-                        + "\" in class \"" + c.name + "\"."
-                    );
-                }
-            }
-        }
     }
 
     static handleExportDeclaration(d: TSESTree.ExportDeclaration)
@@ -359,6 +417,24 @@ export class Somspiler {
     static fromSources(sources: PackageSource[]) : Somspiler {
         return new Somspiler(sources);
     }
+}
+
+function isBoolean(v: boolean | number | string | RegExp | null)
+    : v is boolean
+{
+    return typeof v === "boolean";
+}
+
+function isNumber(v: boolean | number | string | RegExp | null)
+    : v is number
+{
+    return typeof v === "number";
+}
+
+function isString(v: boolean | number | string | RegExp | null)
+    : v is string
+{
+    return typeof v === "string";
 }
 
 function findSoms(curDir: string) : string[] {

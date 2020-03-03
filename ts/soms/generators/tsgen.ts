@@ -1,7 +1,14 @@
-import {FileSource, SomsGeneratorOptions, SomsGenerator} from "../somsgenerator";
+import {FileSource, SomsGenerator, SomsGeneratorOptions} from "../somsgenerator";
 import {
-    isSomsEnumOrClassIdentifier, isSomsNumberType, isSomsPrimitiveType, isSomsPrimitiveValue,
-    SomsPackage, SomsEnum, SomsField, SomsClass, SomsTypeIdentifier, SomsValue, isString,
+    isSomsNumberType,
+    isSomsPrimitiveType,
+    SomsClass,
+    SomsEnum,
+    SomsField,
+    SomsPackage,
+    SomsTypeIdentifier,
+    SomsUdtType,
+    SomsValue
 } from "../somstree";
 
 
@@ -65,19 +72,49 @@ export class TsGenerator implements SomsGenerator
             + "        return {\n"
             + c.fields.filter(f => (!f.staticConst) || (!f.optional)).map(
                 f => {
-                    const prefix = " ".repeat(12) + f.name + " : ";
+                    const prefix = " ".repeat(12) + f.name + ": ";
 
                     if(f.dimensionality > 0) {
-                        return prefix + "[".repeat(f.dimensionality) + "]".repeat(f.dimensionality)
+                        return prefix
+                            + "this." + f.name + ".map("
+                            + "v => v.map(".repeat(f.dimensionality - 1)
+                            + "v => "
+                            + (
+                                isSomsPrimitiveType(f.typeIdentifier)
+                                    ? "v"
+                                    : (
+                                        f.udtType === SomsUdtType.SOMSENUM
+                                            ? "JSON.stringify(v)"
+                                            : "v.projectToAny()"
+                                    )
+                            )
+                            + ")".repeat(f.dimensionality);
                     }
                     else {
-                        return prefix + "null";
+                        return prefix
+                            + TsGenerator.generateFieldToAny(f);
                     }
                 }
             ).join(",\n")
             + "\n"
             + "        };\n"
             + "    }\n";
+    }
+
+    static generateFieldToAny(f: SomsField) : string {
+        if(isSomsPrimitiveType(f.typeIdentifier)) {
+            return "this." + f.name;
+        }
+        else {
+            switch (f.udtType) {
+                case SomsUdtType.SOMSENUM:
+                    return "JSON.stringify(this." + f.name + ")";
+                case SomsUdtType.SOMSCLASS:
+                    return "this." + f.name + ".projectToAny()";
+                default:
+                    throw new Error("Unresolved UDT");
+            }
+        }
     }
 
     static generateFromJson(c: SomsClass, interfaceName: string) : string {
@@ -162,7 +199,7 @@ export class TsGenerator implements SomsGenerator
         return "export interface " + interfaceName + " {\n"
             + (staticConst.length > 0 ? staticConst + "\n" : "")
             + normal
-            + "\n    projectToAny() : any;"
+            + "\n    projectToAny() : any;\n"
             + "}\n";
     }
 
@@ -185,11 +222,9 @@ export class TsGenerator implements SomsGenerator
         if(isSomsPrimitiveType(t)) {
             return isSomsNumberType(t) ? "number" : t;
         }
-        else if(isSomsEnumOrClassIdentifier(t)) {
-            return t.name;
-        }
         else {
-            throw new Error("Don't know what to do with TypeIdentifier " + t);
+            // it must be SomsEnumIdentifier or SomsClassIdentifier
+            return t.name;
         }
     }
 }

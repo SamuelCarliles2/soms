@@ -3,7 +3,6 @@ import * as fs from "fs";
 import {ConcreteSomsConfig, SomsConfig, Somspiler} from "./somspiler";
 import {TsGenerator} from "./generators/tsgen";
 
-
 const cfg = new ConcreteSomsConfig(
     <SomsConfig>JSON.parse(
         fs.readFileSync("./somsconfig.json").toString()
