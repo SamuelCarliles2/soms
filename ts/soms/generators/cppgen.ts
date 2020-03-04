@@ -34,7 +34,7 @@ export class CppTranspiler implements SomsGenerator {
 
         return {
             source : this.transpilationBuffer,
-            filename : somsPackage.name + ".cpp"
+            filename : somsPackage.name + ".hpp"
         }
     }
 
