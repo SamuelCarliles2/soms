@@ -3,9 +3,14 @@ import * as ts from "@typescript-eslint/parser";
 import {AST_NODE_TYPES, TSESTree} from "@typescript-eslint/typescript-estree";
 
 import {
-    isSomsPrimitiveType, isSomsEnumOrClassIdentifier,
+    // isSomsPrimitiveType, isSomsEnumOrClassIdentifier,
     SomsNodeType, SomsPackage, SomsClass, SomsEnum,
-    SomsField, SomsFieldLite, SomsTypeIdentifier, SomsValue, SomsUdtType
+    SomsField, SomsFieldLite,
+    SomsTypeIdentifier, SomsNumberType, SomsPrimitiveType,
+    SomsBooleanTypeIdentifier, SomsInt64TypeIdentifier, SomsDoubleTypeIdentifier,
+    SomsStringTypeIdentifier, SomsUserDefinedTypeIdentifier,
+    SomsEnumTypeIdentifier, SomsClassTypeIdentifier,
+    SomsValue, SomsUdtType, isSomsPrimitiveType
 } from "./somstree";
 
 import {FileSource, PackageSource} from "./somsgenerator";
@@ -126,7 +131,7 @@ export class Somspiler {
                     name: c.name,
                     fields: c.fields.map(
                         f => {
-                            if(isSomsEnumOrClassIdentifier(f.typeIdentifier)) {
+                            if(f instanceof SomsUserDefinedTypeIdentifier) {
                                 const udtType = enumNames.indexOf(f.typeIdentifier.name) >= 0
                                     ? SomsUdtType.SOMSENUM
                                     : (
@@ -237,13 +242,18 @@ export class Somspiler {
     static handleLiteral(l: TSESTree.Literal) : [SomsTypeIdentifier, SomsValue]
     {
         if(isBoolean(l.value)) {
-            return ["boolean", l.value];
+            return [new SomsBooleanTypeIdentifier(), l.value];
         }
         else if(isString(l.value)) {
-            return ["string", l.value];
+            return [new SomsStringTypeIdentifier(), l.value];
         }
         else if(isNumber(l.value) && l.raw) {
-            return [l.raw.indexOf(".") >= 0 ? "double" : "int64", l.value];
+            return [
+                l.raw.indexOf(".") >= 0
+                    ? new SomsDoubleTypeIdentifier()
+                    : new SomsInt64TypeIdentifier(),
+                l.value
+            ];
         }
         else {
             throw new Error("Don't know what to do with literal " + toJson(l));
@@ -319,12 +329,12 @@ export class Somspiler {
             case AST_NODE_TYPES.TSBooleanKeyword:
                 return {
                     name: "",
-                    typeIdentifier: "boolean"
+                    typeIdentifier: new SomsBooleanTypeIdentifier()
                 };
             case AST_NODE_TYPES.TSStringKeyword:
                 return {
                     name: "",
-                    typeIdentifier: "string"
+                    typeIdentifier: new SomsStringTypeIdentifier()
                 };
             case AST_NODE_TYPES.TSTypeReference:
                 return {
