@@ -126,15 +126,15 @@ export class CppTranspiler implements SomsGenerator {
                 }
                 
                 if (somsField.name) fieldDefinition         += `${somsField.name}`;
-                /*
-                if (somsField.defaultValue) {
+                
+                if (somsField.staticConstValue) {
 
                     if (somsField.dimensionality == 0) {
                         fieldDefinition += (resolvedType == "std::string") 
-                                                    ? ` = "${somsField.defaultValue}"` 
-                                                    : ` = ${somsField.defaultValue}`;
+                                                    ? ` = "${somsField.staticConstValue}"` 
+                                                    : ` = ${somsField.staticConstValue}`;
                     }
-                }*/
+                }
                 if (this.UDTs.get(this.retrieveTypeName(somsField.typeIdentifier)) == "enum") {
                     fieldDefinition += `= ${somsField.typeIdentifier}(0)`;
                 }
