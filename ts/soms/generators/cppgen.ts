@@ -1,5 +1,5 @@
 import {FileSource, SomsGenerator, SomsGeneratorOptions} from "../somsgenerator";
-import { SomsPackage, SomsEnum } from "../somstree";
+import { SomsPackage, SomsEnum, SomsTypeIdentifier, SomsEnumOrClassIdentifier, SomsPrimitiveType, SomsField } from "../somstree";
 
 
 export class CppTranspiler implements SomsGenerator {
@@ -22,17 +22,20 @@ export class CppTranspiler implements SomsGenerator {
     private readonly TAB            : number = 4;
 
     public generate(somspackages : Array<SomsPackage>) : FileSource[] {
-        let fileSource : FileSource[] = [];
-        somspackages.forEach(somspackage => {
+        return somspackages.map(p => this.generateSource(p));
+    }
 
-            this.transpilationBuffer = this.stdIncludes + this.engineIncludes;
+    private generateSource(somsPackage : SomsPackage) : FileSource {
+        this.transpilationBuffer = this.stdIncludes + this.engineIncludes;
 
-            this.transpileEnums(somspackage);
-            this.transpileClasses(somspackage);
-            this.transpilationBuffer += "};\n";
+        this.transpileEnums(somsPackage);
+        this.transpileClasses(somsPackage);
+        this.transpilationBuffer += "};\n";
 
-            this.writeFile();
-        });
+        return {
+            source : this.transpilationBuffer,
+            filename : somsPackage.name + ".cpp"
+        }
     }
 
     private padString(str : string, width : number) : string {
@@ -53,6 +56,10 @@ export class CppTranspiler implements SomsGenerator {
         }
     }
 
+    private retrieveTypeName(typeIdentifier : any) : string {
+        return ("name" in typeIdentifier) ? typeIdentifier.name : typeIdentifier;
+    }
+
     private transpileClasses(somsPackage : SomsPackage) : void {
         for (let somsClass of somsPackage.classes) {
         
@@ -61,7 +68,7 @@ export class CppTranspiler implements SomsGenerator {
 
             for (let somsField of somsClass.fields) {
 
-                let resolvedType : string = this.resolveType(somsField.typeIdentifier);
+                let resolvedType : string = this.resolveType(this.retrieveTypeName(somsField.typeIdentifier));
 
                 //getters/setters
                 switch (somsField.dimensionality) {
@@ -94,13 +101,12 @@ export class CppTranspiler implements SomsGenerator {
             this.transpilationBuffer += this.padString("private:\n", this.TAB);
             for (let somsField of somsClass.fields) {
 
-                let resolvedType             = this.resolveType(somsField.typeIdentifier);
+                let resolvedType             = this.resolveType(this.retrieveTypeName(somsField.typeIdentifier));
                 let fieldDefinition : string = "";
                 this.transpilationBuffer    += this.padString(`struct Field${somsField.name} {\n`, this.TAB*2);
                 
 
                 if (somsField.staticConstValue) {
-                    if (somsField.defaultValue == null) throw Error("A static const field must have a default value");
                     fieldDefinition  += "static const ";
                 }
 
@@ -120,6 +126,7 @@ export class CppTranspiler implements SomsGenerator {
                 }
                 
                 if (somsField.name) fieldDefinition         += `${somsField.name}`;
+                /*
                 if (somsField.defaultValue) {
 
                     if (somsField.dimensionality == 0) {
@@ -127,8 +134,8 @@ export class CppTranspiler implements SomsGenerator {
                                                     ? ` = "${somsField.defaultValue}"` 
                                                     : ` = ${somsField.defaultValue}`;
                     }
-                }
-                if (this.UDTs.get(somsField.typeIdentifier) == "enum") {
+                }*/
+                if (this.UDTs.get(this.retrieveTypeName(somsField.typeIdentifier)) == "enum") {
                     fieldDefinition += `= ${somsField.typeIdentifier}(0)`;
                 }
 
@@ -137,7 +144,7 @@ export class CppTranspiler implements SomsGenerator {
 
                 this.transpilationBuffer += this.padString(`bool optional = ${somsField.optional};\n`,                      this.TAB*3);
                 this.transpilationBuffer += this.padString(`int dimensionality = ${somsField.dimensionality};\n`,           this.TAB*3);
-                this.transpilationBuffer += this.padString(`std::string typeIdentifier = "${somsField.typeIdentifier}";\n`, this.TAB*3);
+                this.transpilationBuffer += this.padString(`std::string typeIdentifier = "${this.retrieveTypeName(somsField.typeIdentifier)}";\n`, this.TAB*3);
                 this.transpilationBuffer += this.padString(`bool staticConstValue = ${somsField.staticConstValue};\n`,      this.TAB*3);
                 this.transpilationBuffer += this.padString(`} ${somsField.name};\n\n`,                                      this.TAB*2);
             }
@@ -149,38 +156,40 @@ export class CppTranspiler implements SomsGenerator {
         }
     }
 
-    private buildClassSerdeMethods(name: string, type : string, fields : Array<soms.SomsField>) : string {
+    private buildClassSerdeMethods(name: string, type : string, fields : Array<SomsField>) : string {
 
         let serializeMethod      = this.padString(`void Serialize(JsonSerializer& s) {\n`, this.TAB*2);
         fields.forEach(field => {
+            let fieldIdentifier : string = this.retrieveTypeName(field.typeIdentifier);
+
             if (!field.staticConstValue) {
-                if (this.primitiveMap.has(field.typeIdentifier) || (this.UDTs.has(field.typeIdentifier) && this.UDTs.get(field.typeIdentifier) != "enum")) {
+                if (this.primitiveMap.has(fieldIdentifier) || (this.UDTs.has(fieldIdentifier) && this.UDTs.get(fieldIdentifier) != "enum")) {
                     serializeMethod +=     this.padString(`s.Serialize("${field.name}", ${field.name}.${field.name});\n`, this.TAB*3);
                 }
                 else {
                     serializeMethod +=     this.padString(`if (this->bToJson) {\n`, this.TAB*3);
-                    serializeMethod +=     this.padString(`unsigned int ${field.typeIdentifier}enumIndex = 0;\n`, this.TAB*4)
-                    serializeMethod +=     this.padString(`unsigned int ${field.typeIdentifier}length = sizeof(${field.typeIdentifier}StrArray) / sizeof(std::string);\n`, this.TAB*4);
-                    serializeMethod +=     this.padString(`for (int i = 0; i < ${field.typeIdentifier}length; i++) {\n`, this.TAB*4);
-                    serializeMethod +=     this.padString(`if (${field.typeIdentifier}StrArray[i].find(${field.typeIdentifier}StrArray[${field.name}.${field.name}], 0) != std::string::npos) {\n`, this.TAB*5);
+                    serializeMethod +=     this.padString(`unsigned int ${fieldIdentifier}enumIndex = 0;\n`, this.TAB*4)
+                    serializeMethod +=     this.padString(`unsigned int ${fieldIdentifier}length = sizeof(${fieldIdentifier}StrArray) / sizeof(std::string);\n`, this.TAB*4);
+                    serializeMethod +=     this.padString(`for (int i = 0; i < ${fieldIdentifier}length; i++) {\n`, this.TAB*4);
+                    serializeMethod +=     this.padString(`if (${fieldIdentifier}StrArray[i].find(${fieldIdentifier}StrArray[${field.name}.${field.name}], 0) != std::string::npos) {\n`, this.TAB*5);
                     serializeMethod +=     this.padString(`${field.typeIdentifier}enumIndex = i;\n`, this.TAB*6);
                     serializeMethod +=     this.padString(`break;\n`, this.TAB*6);
                     serializeMethod +=     this.padString(`}\n`, this.TAB*5);
                     serializeMethod +=     this.padString(`}\n`, this.TAB*4);
-                    serializeMethod +=     this.padString(`s.Serialize("${field.name}",${field.typeIdentifier}StrArray[${field.name}.${field.name}]);\n`, this.TAB*4);
+                    serializeMethod +=     this.padString(`s.Serialize("${field.name}",${fieldIdentifier}StrArray[${field.name}.${field.name}]);\n`, this.TAB*4);
                     serializeMethod +=     this.padString(`}\n`, this.TAB*3);
                     serializeMethod +=     this.padString(`else {\n`, this.TAB*3);
                     serializeMethod +=     this.padString(`std::string enumValue;\n`, this.TAB*4);
                     serializeMethod +=     this.padString(`s.Serialize("${field.name}", enumValue);\n`, this.TAB*4);
-                    serializeMethod +=     this.padString(`unsigned int ${field.typeIdentifier}enumIndex = 0;\n`, this.TAB*4)
-                    serializeMethod +=     this.padString(`unsigned int ${field.typeIdentifier}length = sizeof(${field.typeIdentifier}StrArray) / sizeof(std::string);\n`, this.TAB*4);
-                    serializeMethod +=     this.padString(`for (int i = 0; i < ${field.typeIdentifier}length; i++) {\n`, this.TAB*4);
-                    serializeMethod +=     this.padString(`if (${field.typeIdentifier}StrArray[i].find(enumValue, 0) != std::string::npos) {\n`, this.TAB*5);
-                    serializeMethod +=     this.padString(`${field.typeIdentifier}enumIndex = i;\n`, this.TAB*6);
+                    serializeMethod +=     this.padString(`unsigned int ${fieldIdentifier}enumIndex = 0;\n`, this.TAB*4)
+                    serializeMethod +=     this.padString(`unsigned int ${fieldIdentifier}length = sizeof(${fieldIdentifier}StrArray) / sizeof(std::string);\n`, this.TAB*4);
+                    serializeMethod +=     this.padString(`for (int i = 0; i < ${fieldIdentifier}length; i++) {\n`, this.TAB*4);
+                    serializeMethod +=     this.padString(`if (${fieldIdentifier}StrArray[i].find(enumValue, 0) != std::string::npos) {\n`, this.TAB*5);
+                    serializeMethod +=     this.padString(`${fieldIdentifier}enumIndex = i;\n`, this.TAB*6);
                     serializeMethod +=     this.padString(`break;\n`, this.TAB*6);
                     serializeMethod +=     this.padString(`}\n`, this.TAB*5);
                     serializeMethod +=     this.padString(`}\n`, this.TAB*4);
-                    serializeMethod +=     this.padString(`${field.name}.${field.name} = ${field.typeIdentifier}(${field.typeIdentifier}enumIndex);\n`, this.TAB*4);
+                    serializeMethod +=     this.padString(`${field.name}.${field.name} = ${fieldIdentifier}(${fieldIdentifier}enumIndex);\n`, this.TAB*4);
                     serializeMethod +=     this.padString(`}\n`, this.TAB*3);
                 }
             }
@@ -209,12 +218,15 @@ export class CppTranspiler implements SomsGenerator {
         serdeMethodFromJson     += this.padString(`return true;\n`, this.TAB*3);
         serdeMethodFromJson     += this.padString(`};\n\n`, this.TAB*2);
 
+        
         let serdeMethodToJson   =  this.padString(`Json::Value toJson() {\n`, this.TAB*2);
         serdeMethodToJson      +=  this.padString(`JsonSerializer s(true);\n`, this.TAB*3);
         serdeMethodToJson      +=  this.padString(`this->bToJson = true;\n`, this.TAB*3);
         fields.forEach(field => {
+            let fieldIdentifier : string = this.retrieveTypeName(field.typeIdentifier);
+
             if (!field.staticConstValue) {
-                if (this.primitiveMap.has(field.typeIdentifier) || (this.UDTs.has(field.typeIdentifier) && this.UDTs.get(field.typeIdentifier) != "enum")) {
+                if (this.primitiveMap.has(fieldIdentifier) || (this.UDTs.has(fieldIdentifier) && this.UDTs.get(fieldIdentifier) != "enum")) {
                     serdeMethodToJson +=     this.padString(`s.Serialize("${field.name}", ${field.name}.${field.name});\n`, this.TAB*3);
                 }
                 else {
@@ -246,14 +258,5 @@ export class CppTranspiler implements SomsGenerator {
         }
 
         return resolvedType;
-    }
-
-    private writeFile() : void {
-        const fs = require('fs');
-        
-        fs.writeFile(`${this.fileName}.hpp`, this.transpilationBuffer, (err : Error) => {
-            if (err) throw err;
-            console.log("Success");
-        })
     }
 }
