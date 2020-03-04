@@ -3,14 +3,22 @@ import * as ts from "@typescript-eslint/parser";
 import {AST_NODE_TYPES, TSESTree} from "@typescript-eslint/typescript-estree";
 
 import {
-    // isSomsPrimitiveType, isSomsEnumOrClassIdentifier,
-    SomsNodeType, SomsPackage, SomsClass, SomsEnum,
-    SomsField, SomsFieldLite,
-    SomsTypeIdentifier, SomsNumberType, SomsPrimitiveType,
-    SomsBooleanTypeIdentifier, SomsInt64TypeIdentifier, SomsDoubleTypeIdentifier,
-    SomsStringTypeIdentifier, SomsUserDefinedTypeIdentifier,
-    SomsEnumTypeIdentifier, SomsClassTypeIdentifier,
-    SomsValue, SomsUdtType, isSomsPrimitiveType
+    isSomsPrimitiveType,
+    SomsBooleanTypeIdentifier,
+    SomsClass,
+    SomsClassTypeIdentifier,
+    SomsDoubleTypeIdentifier,
+    SomsEnum,
+    SomsEnumTypeIdentifier,
+    SomsField,
+    SomsFieldLite,
+    SomsInt64TypeIdentifier,
+    SomsNodeType,
+    SomsPackage, SomsPrimitiveType,
+    SomsStringTypeIdentifier,
+    SomsTypeIdentifier,
+    SomsUserDefinedTypeIdentifier,
+    SomsValue
 } from "./somstree";
 
 import {FileSource, PackageSource} from "./somsgenerator";
@@ -131,16 +139,19 @@ export class Somspiler {
                     name: c.name,
                     fields: c.fields.map(
                         f => {
-                            if(f instanceof SomsUserDefinedTypeIdentifier) {
-                                const udtType = enumNames.indexOf(f.typeIdentifier.name) >= 0
-                                    ? SomsUdtType.SOMSENUM
+                            if(f.typeIdentifier instanceof SomsPrimitiveType) {
+                                return f;
+                            }
+                            else if(f.typeIdentifier instanceof SomsUserDefinedTypeIdentifier) {
+                                const t = enumNames.indexOf(f.typeIdentifier.name) >= 0
+                                    ? new SomsEnumTypeIdentifier(f.typeIdentifier.name)
                                     : (
                                         classNames.indexOf(f.typeIdentifier.name) >= 0
-                                        ? SomsUdtType.SOMSCLASS
+                                            ? new SomsClassTypeIdentifier(f.typeIdentifier.name)
                                             : null
                                     );
 
-                                if(udtType === null) {
+                                if(t === null) {
                                     throw new Error(
                                         "Unresolved type " + f.typeIdentifier.name
                                         + " encountered in field " + f.name
@@ -151,8 +162,7 @@ export class Somspiler {
                                 return new SomsField(
                                     {
                                         name: f.name,
-                                        typeIdentifier: f.typeIdentifier,
-                                        udtType: udtType,
+                                        typeIdentifier: t,
                                         dimensionality: f.dimensionality,
                                         optional: f.optional,
                                         staticConst: f.staticConst,
@@ -161,7 +171,11 @@ export class Somspiler {
                                 );
                             }
                             else {
-                                return f;
+                                throw new Error(
+                                    "Unresolved type " + f.typeIdentifier.name
+                                    + " encountered in field " + f.name
+                                    + " in class " + c.name
+                                );
                             }
                         }
                     )
@@ -229,9 +243,7 @@ export class Somspiler {
         : [SomsTypeIdentifier, SomsValue]
     {
         return [
-            {
-                name: (<TSESTree.Identifier>e.object).name
-            },
+            new SomsEnumTypeIdentifier((<TSESTree.Identifier>e.object).name),
             {
                 enumName: (<TSESTree.Identifier>e.object).name,
                 value: (<TSESTree.Identifier>e.property).name
@@ -374,10 +386,23 @@ export class Somspiler {
             const name = (<TSESTree.Identifier>r.typeName).name;
 
             if(isSomsPrimitiveType(name)) {
-                return name;
+                switch (name) {
+                    case "boolean":
+                        return new SomsBooleanTypeIdentifier();
+                    case "int64":
+                        return new SomsInt64TypeIdentifier();
+                    case "double":
+                        return new SomsDoubleTypeIdentifier();
+                    case "string":
+                        return new SomsStringTypeIdentifier();
+                    default:
+                        throw new Error(
+                            "Don't recognize primitive type " + name
+                        );
+                }
             }
             else {
-                return { name: name };
+                return new SomsUserDefinedTypeIdentifier(name);
             }
         }
         else {
