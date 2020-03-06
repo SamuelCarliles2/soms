@@ -1,12 +1,37 @@
-import {FileSource, SomsGenerator, SomsGeneratorOptions} from "../somsgenerator";
+/*
+MIT License
+
+Copyright (c) 2020 Samuel Carliles
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 import {
-    isSomsPrimitiveType,
+    FileSource, SomsGenerator, SomsGeneratorOptions
+} from "../somsgenerator";
+
+import {
     SomsEnum, SomsField, SomsClass, SomsPackage,
     SomsTypeIdentifier, SomsPrimitiveType, SomsNumberType,
     SomsEnumTypeIdentifier, SomsClassTypeIdentifier,
-    SomsValue, SomsUserDefinedTypeIdentifier
+    SomsValue
 } from "../somstree";
-import {toJson} from "../somspiler";
 
 
 export class TsGenerator implements SomsGenerator
@@ -34,7 +59,10 @@ export class TsGenerator implements SomsGenerator
     static generateEnumSource(e: SomsEnum) : string {
         return "export enum " + e.name + " {\n"
             + e.values.map(v => "    " + v + " = \"" + v + "\"").join(",\n")
-            + "\n}\n";
+            + "\n}\n\n"
+            + "const " + e.name + "Map : any = {\n"
+            + e.values.map(v => "    " + v + ": " + e.name + "." + v).join(",\n")
+            + "\n};\n";
     }
 
     static generateClassSource(c: SomsClass) : string {
@@ -52,93 +80,82 @@ export class TsGenerator implements SomsGenerator
             + "\n"
             + TsGenerator.generateFromJson(c, interfaceName)
             + "\n"
-            + TsGenerator.generateToJson(c)
-            + "\n"
-            + TsGenerator.generateProjectToAny(c)
+            + TsGenerator.generateToJSON(c)
             + "}\n";
     }
 
-    static generateToJson(c: SomsClass, leftPad?: "") : string {
-        return "    toJson(space?: string | number) : string {\n"
-            + "        return JSON.stringify(this.projectToAny(), null, space);\n"
-            + "    }\n";
-    }
-
-    static generateProjectToAny(c: SomsClass) : string {
-        return "    projectToAny() : any {\n"
+    static generateToJSON(c: SomsClass) : string {
+        return "    toJSON() : any {\n"
             + "        return {\n"
             + c.fields.filter(f => (!f.staticConst) || (!f.optional)).map(
-                f => {
-                    const prefix = " ".repeat(12) + f.name + ": ";
-
-                    if(f.dimensionality > 0) {
-                        if(f.typeIdentifier instanceof SomsPrimitiveType) {
-                            return prefix + "this." + f.name;
-                        }
-                        else if(f.typeIdentifier instanceof SomsUserDefinedTypeIdentifier) {
-                            return prefix
-                                + "this." + f.name + ".map("
-                                + "v => v.map(".repeat(f.dimensionality - 1)
-                                + "v => "
-                                + (
-                                    f.typeIdentifier instanceof SomsEnumTypeIdentifier
-                                        ? "JSON.stringify(v)"
-                                        : "v.projectToAny()"
-                                )
-                                + ")".repeat(f.dimensionality);
-                        }
-                        else {
-                            throw new Error(
-                                "Unresolved array type " + f.typeIdentifier.name
-                                + " in field " + f.name + " in class " + c.name
-                            );
-                        }
-                    }
-                    else {
-                        return prefix
-                            + TsGenerator.generateFieldToAny(f);
-                    }
-                }
+                f => "            " + f.name + ": this." + f.name
             ).join(",\n")
-            + "\n"
-            + "        };\n"
+            + "\n        };\n"
             + "    }\n";
-    }
-
-    static generateFieldToAny(f: SomsField) : string {
-        if(f.typeIdentifier instanceof SomsPrimitiveType) {
-            return "this." + f.name;
-        }
-        else if(f.typeIdentifier instanceof SomsEnumTypeIdentifier) {
-            return "JSON.stringify(this." + f.name + ")";
-        }
-        else if(f.typeIdentifier instanceof SomsClassTypeIdentifier) {
-            return "this." + f.name + ".projectToAny()";
-        }
-        else {
-            console.log(toJson(f));
-            console.log("Primitive: " + (f.typeIdentifier instanceof SomsPrimitiveType));
-            console.log("Enum: " + (f.typeIdentifier instanceof SomsEnumTypeIdentifier));
-            console.log("Class: " + (f.typeIdentifier instanceof SomsClassTypeIdentifier));
-
-            throw new Error("Unresolved UDT");
-        }
     }
 
     static generateFromJson(c: SomsClass, interfaceName: string) : string {
-        return "    static fromJson(s: string) : " + c.name + " {\n"
-            + "        return new "
-            + c.name + "(<" + interfaceName + ">JSON.parse(s));\n"
+        return "    static fromJson(v: string | any) : " + c.name + " {\n"
+            + "        if(typeof v === \"string\") {\n"
+            + "            return " + c.name + ".fromJson(JSON.parse(v));\n"
+            + "        }\n"
+            + "        else {\n"
+            + "            return new " + c.name + "({\n"
+            + c.fields.filter(f => !(f.staticConst && f.optional)).map(
+                f => " ".repeat(20)
+                    + TsGenerator.generateInterfaceFieldConstruction(f, "v")
+            ).join(",\n")
+            + "\n                }\n"
+            + "            );\n"
+            + "        }\n"
             + "    }\n";
+    }
+
+    static generateInterfaceFieldConstruction(f: SomsField, sourceName: string) : string {
+        if(f.typeIdentifier instanceof SomsPrimitiveType) {
+            return f.name + ": " + sourceName + "." + f.name;
+        }
+        else if(f.typeIdentifier instanceof SomsEnumTypeIdentifier) {
+            if(f.dimensionality > 0) {
+                // TODO: TEST THIS
+                return f.name + ": " + sourceName + "." + f.name
+                    + ".map("
+                    + "v => v.map(".repeat(f.dimensionality - 1)
+                    + "v => " + f.typeIdentifier.name + "Map[v]"
+                    + ")".repeat(f.dimensionality);
+            }
+            else {
+                return f.name + ": "
+                    + f.typeIdentifier.name + "Map[v." + f.name + "]";
+            }
+        }
+        else if(f.typeIdentifier instanceof SomsClassTypeIdentifier) {
+            if(f.dimensionality > 0) {
+                return f.name + ": " + sourceName + "." + f.name
+                    + ".map("
+                    + "v => v.map(".repeat(f.dimensionality - 1)
+                    + "(v: any) => " + f.typeIdentifier.name + ".fromJson(v)"
+                    + ")".repeat(f.dimensionality);
+            }
+            else {
+                return f.name + ": " + f.typeIdentifier.name + ".fromJson(v)";
+            }
+        }
+        else {
+            throw new Error(
+                "Unresolved field type " + f.typeIdentifier.name
+                + " in field " + f.name
+            );
+        }
     }
 
     static generateConstructor(c: SomsClass, interfaceName: string) : string {
         return "    constructor(o: " + interfaceName + ") {\n"
             + c.fields.filter(f => !f.staticConst).map(f =>
                 "        "
-                + TsGenerator.generateClassFieldAssignmentSource(f, "o") + "\n"
-            ).join("")
-            + "    }\n";
+                + TsGenerator.generateClassFieldAssignmentSource(f, "o")
+            ).join("\n")
+            + "\n    }\n";
     }
 
     static generateClassFieldAssignmentSource(f: SomsField, sourceName: string) : string {
@@ -166,16 +183,28 @@ export class TsGenerator implements SomsGenerator
                 + " = " + TsGenerator.generateValueString(f.staticConstValue)
                 + ";\n";
         }
-        else {
+        else if(f.dimensionality > 0) {
             return "readonly " + f.name + ": "
                 + TsGenerator.generateTypeIdentifierString(f.typeIdentifier)
                 + "[]".repeat(f.dimensionality)
                 + ";\n";
         }
+        else {
+            return "readonly " + f.name + (
+                f.optional
+                    ? ("?: "
+                        + TsGenerator.generateTypeIdentifierString(f.typeIdentifier)
+                        + " | null;\n"
+                    )
+                    : (": "
+                        + TsGenerator.generateTypeIdentifierString(f.typeIdentifier)
+                        + ";\n"
+                    )
+            );
+        }
     }
 
     static generateValueString(v: SomsValue) : string {
-        // TODO: make this not dumb
         if(typeof v === "string") {
             return "\"" + v + "\"";
         }
@@ -196,33 +225,48 @@ export class TsGenerator implements SomsGenerator
                 const d = TsGenerator.generateInterfaceFieldDeclarationSource(f);
                 return d.length > 0 ? "    " + d : "";
             }
-        ).join("");
-        const normal = c.fields.filter(f => !f.staticConst).map(
+        ).filter(s => s.length > 0).join("\n");
+        const instance = c.fields.filter(f => !f.staticConst).map(
             f => {
                 const d = TsGenerator.generateInterfaceFieldDeclarationSource(f);
                 return d.length > 0 ? "    " + d : "";
             }
-        ).join("");
+        ).filter(s => s.length > 0).join("\n");
 
         return "export interface " + interfaceName + " {\n"
             + (staticConst.length > 0 ? staticConst + "\n" : "")
-            + normal
-            + "\n    projectToAny() : any;\n"
+            + (instance.length > 0 ? "\n" + instance + "\n" : "")
             + "}\n";
     }
 
     static generateInterfaceFieldDeclarationSource(f: SomsField) : string {
-        const suffix = TsGenerator.generateTypeIdentifierString(f.typeIdentifier)
-            + "[]".repeat(f.dimensionality)
-            + ";\n";
-
         if(f.staticConst) {
             return (!f.optional)
-                ? "readonly " + f.name + ": " + suffix
+                ? (
+                    "readonly " + f.name + ": "
+                    +  TsGenerator.generateTypeIdentifierString(f.typeIdentifier)
+                    + ";"
+                )
                 : "";
         }
+        else if(f.dimensionality > 0) {
+            return f.name + (f.optional ? "?: " : ": ")
+                + TsGenerator.generateTypeIdentifierString(f.typeIdentifier)
+                + "[]".repeat(f.dimensionality)
+                + ";";
+        }
         else {
-            return f.name + (f.optional ? "?: " : ": ") + suffix;
+            return f.name + (
+                f.optional
+                    ? ("?: "
+                        + TsGenerator.generateTypeIdentifierString(f.typeIdentifier)
+                        + " | null;"
+                    )
+                    : (": "
+                        + TsGenerator.generateTypeIdentifierString(f.typeIdentifier)
+                        + ";"
+                )
+            );
         }
     }
 

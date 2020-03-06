@@ -4,19 +4,23 @@ export enum FooglarType {
     JEWEL = "JEWEL"
 }
 
+const FooglarTypeMap : any = {
+    ART: FooglarType.ART,
+    CAT: FooglarType.CAT,
+    JEWEL: FooglarType.JEWEL
+};
+
 export interface FooglarLite {
     readonly MESSAGE_SCHEMA_VERSION: string;
 
     name: string;
-    yearOfBirth?: number;
+    yearOfBirth?: number | null;
     fooglarType: FooglarType;
     heightInKm: number;
     aliases: string[];
     aliasAliases: string[][];
     threedeeDouble: number[][][];
     intsAPoppin: number[][][];
-
-    projectToAny() : any;
 }
 
 export class Fooglar implements FooglarLite {
@@ -27,7 +31,7 @@ export class Fooglar implements FooglarLite {
     static readonly MIN_HAUL? = 100000;
 
     readonly name: string;
-    readonly yearOfBirth: number;
+    readonly yearOfBirth?: number | null;
     readonly fooglarType: FooglarType;
     readonly heightInKm: number;
     readonly aliases: string[];
@@ -46,20 +50,32 @@ export class Fooglar implements FooglarLite {
         this.intsAPoppin = o.intsAPoppin;
     }
 
-    static fromJson(s: string) : Fooglar {
-        return new Fooglar(<FooglarLite>JSON.parse(s));
+    static fromJson(v: string | any) : Fooglar {
+        if(typeof v === "string") {
+            return Fooglar.fromJson(JSON.parse(v));
+        }
+        else {
+            return new Fooglar({
+                    MESSAGE_SCHEMA_VERSION: v.MESSAGE_SCHEMA_VERSION,
+                    name: v.name,
+                    yearOfBirth: v.yearOfBirth,
+                    fooglarType: FooglarTypeMap[v.fooglarType],
+                    heightInKm: v.heightInKm,
+                    aliases: v.aliases,
+                    aliasAliases: v.aliasAliases,
+                    threedeeDouble: v.threedeeDouble,
+                    intsAPoppin: v.intsAPoppin
+                }
+            );
+        }
     }
 
-    toJson(space?: string | number) : string {
-        return JSON.stringify(this.projectToAny(), null, space);
-    }
-
-    projectToAny() : any {
+    toJSON() : any {
         return {
             MESSAGE_SCHEMA_VERSION: this.MESSAGE_SCHEMA_VERSION,
             name: this.name,
             yearOfBirth: this.yearOfBirth,
-            fooglarType: JSON.stringify(this.fooglarType),
+            fooglarType: this.fooglarType,
             heightInKm: this.heightInKm,
             aliases: this.aliases,
             aliasAliases: this.aliasAliases,
@@ -76,8 +92,6 @@ export interface CaseLite {
     id: number;
     description: string;
     suspects: Fooglar[];
-
-    projectToAny() : any;
 }
 
 export class Case implements CaseLite {
@@ -93,20 +107,27 @@ export class Case implements CaseLite {
         this.suspects = o.suspects;
     }
 
-    static fromJson(s: string) : Case {
-        return new Case(<CaseLite>JSON.parse(s));
+    static fromJson(v: string | any) : Case {
+        if(typeof v === "string") {
+            return Case.fromJson(JSON.parse(v));
+        }
+        else {
+            return new Case({
+                    MESSAGE_SCHEMA_VERSION: v.MESSAGE_SCHEMA_VERSION,
+                    id: v.id,
+                    description: v.description,
+                    suspects: v.suspects.map((v: any) => Fooglar.fromJson(v))
+                }
+            );
+        }
     }
 
-    toJson(space?: string | number) : string {
-        return JSON.stringify(this.projectToAny(), null, space);
-    }
-
-    projectToAny() : any {
+    toJSON() : any {
         return {
             MESSAGE_SCHEMA_VERSION: this.MESSAGE_SCHEMA_VERSION,
             id: this.id,
             description: this.description,
-            suspects: this.suspects.map(v => v.projectToAny())
+            suspects: this.suspects
         };
     }
 }
@@ -116,20 +137,18 @@ export interface FootectiveLite {
     readonly MESSAGE_SCHEMA_VERSION: string;
 
     name: string;
-    alcoholic?: boolean;
-    looseCannon?: boolean;
+    alcoholic?: boolean | null;
+    looseCannon?: boolean | null;
     cases: Case[];
     directReports: Footective[];
-
-    projectToAny() : any;
 }
 
 export class Footective implements FootectiveLite {
     readonly MESSAGE_SCHEMA_VERSION = "1.0.0";
 
     readonly name: string;
-    readonly alcoholic: boolean;
-    readonly looseCannon: boolean;
+    readonly alcoholic?: boolean | null;
+    readonly looseCannon?: boolean | null;
     readonly cases: Case[];
     readonly directReports: Footective[];
 
@@ -141,22 +160,31 @@ export class Footective implements FootectiveLite {
         this.directReports = o.directReports;
     }
 
-    static fromJson(s: string) : Footective {
-        return new Footective(<FootectiveLite>JSON.parse(s));
+    static fromJson(v: string | any) : Footective {
+        if(typeof v === "string") {
+            return Footective.fromJson(JSON.parse(v));
+        }
+        else {
+            return new Footective({
+                    MESSAGE_SCHEMA_VERSION: v.MESSAGE_SCHEMA_VERSION,
+                    name: v.name,
+                    alcoholic: v.alcoholic,
+                    looseCannon: v.looseCannon,
+                    cases: v.cases.map((v: any) => Case.fromJson(v)),
+                    directReports: v.directReports.map((v: any) => Footective.fromJson(v))
+                }
+            );
+        }
     }
 
-    toJson(space?: string | number) : string {
-        return JSON.stringify(this.projectToAny(), null, space);
-    }
-
-    projectToAny() : any {
+    toJSON() : any {
         return {
             MESSAGE_SCHEMA_VERSION: this.MESSAGE_SCHEMA_VERSION,
             name: this.name,
             alcoholic: this.alcoholic,
             looseCannon: this.looseCannon,
-            cases: this.cases.map(v => v.projectToAny()),
-            directReports: this.directReports.map(v => v.projectToAny())
+            cases: this.cases,
+            directReports: this.directReports
         };
     }
 }

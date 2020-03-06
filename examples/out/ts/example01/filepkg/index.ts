@@ -1,7 +1,6 @@
 export interface OneMoreLite {
-    name: string;
 
-    projectToAny() : any;
+    name: string;
 }
 
 export class OneMore implements OneMoreLite {
@@ -12,15 +11,19 @@ export class OneMore implements OneMoreLite {
         this.name = o.name;
     }
 
-    static fromJson(s: string) : OneMore {
-        return new OneMore(<OneMoreLite>JSON.parse(s));
+    static fromJson(v: string | any) : OneMore {
+        if(typeof v === "string") {
+            return OneMore.fromJson(JSON.parse(v));
+        }
+        else {
+            return new OneMore({
+                    name: v.name
+                }
+            );
+        }
     }
 
-    toJson(space?: string | number) : string {
-        return JSON.stringify(this.projectToAny(), null, space);
-    }
-
-    projectToAny() : any {
+    toJSON() : any {
         return {
             name: this.name
         };
