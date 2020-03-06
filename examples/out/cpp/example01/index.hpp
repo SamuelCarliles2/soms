@@ -94,93 +94,54 @@ static std::string FooglarTypeStrArray[] = {"","ART","CAT","JEWEL"};
         struct FieldMESSAGE_SCHEMA_VERSION {
             std::string MESSAGE_SCHEMA_VERSION = "1.0.0";
             bool optional = false;
-            int dimensionality = 0;
-            std::string typeIdentifier = "string";
-            bool staticConstValue = true;
         } MESSAGE_SCHEMA_VERSION;
         struct FieldDEFAULT_CATCH {
             bool DEFAULT_CATCH = false;
             bool optional = true;
-            int dimensionality = 0;
-            std::string typeIdentifier = "boolean";
-            bool staticConstValue = true;
         } DEFAULT_CATCH;
         struct FieldDEFAULT_FOOGLAR_TYPE {
             FooglarType DEFAULT_FOOGLAR_TYPE= FooglarType(0);
             bool optional = true;
-            int dimensionality = 0;
-            std::string typeIdentifier = "FooglarType";
-            bool staticConstValue = true;
         } DEFAULT_FOOGLAR_TYPE;
         struct FieldDISCOUNT_RATE {
             double DISCOUNT_RATE = 0.1;
             bool optional = true;
-            int dimensionality = 0;
-            std::string typeIdentifier = "double";
-            bool staticConstValue = true;
         } DISCOUNT_RATE;
         struct FieldMIN_HAUL {
             int64_t MIN_HAUL = 100000;
             bool optional = true;
-            int dimensionality = 0;
-            std::string typeIdentifier = "int64";
-            bool staticConstValue = true;
         } MIN_HAUL;
         struct Fieldname {
             std::string name;
             bool optional = false;
-            int dimensionality = 0;
-            std::string typeIdentifier = "string";
-            bool staticConstValue = false;
         } name;
         struct FieldyearOfBirth {
             int64_t yearOfBirth;
             bool optional = true;
-            int dimensionality = 0;
-            std::string typeIdentifier = "int64";
-            bool staticConstValue = false;
         } yearOfBirth;
         struct FieldfooglarType {
             FooglarType fooglarType= FooglarType(0);
             bool optional = false;
-            int dimensionality = 0;
-            std::string typeIdentifier = "FooglarType";
-            bool staticConstValue = false;
         } fooglarType;
         struct FieldheightInKm {
             double heightInKm;
             bool optional = false;
-            int dimensionality = 0;
-            std::string typeIdentifier = "double";
-            bool staticConstValue = false;
         } heightInKm;
         struct Fieldaliases {
             std::vector<std::string> aliases;
             bool optional = false;
-            int dimensionality = 1;
-            std::string typeIdentifier = "string";
-            bool staticConstValue = false;
         } aliases;
         struct FieldaliasAliases {
             std::vector<std::vector<std::string>> aliasAliases;
             bool optional = false;
-            int dimensionality = 2;
-            std::string typeIdentifier = "string";
-            bool staticConstValue = false;
         } aliasAliases;
         struct FieldthreedeeDouble {
             std::vector<std::vector<std::vector<double>>> threedeeDouble;
             bool optional = false;
-            int dimensionality = 3;
-            std::string typeIdentifier = "double";
-            bool staticConstValue = false;
         } threedeeDouble;
         struct FieldintsAPoppin {
             std::vector<std::vector<std::vector<int64_t>>> intsAPoppin;
             bool optional = false;
-            int dimensionality = 3;
-            std::string typeIdentifier = "int64";
-            bool staticConstValue = false;
         } intsAPoppin;
         bool bToJson = false;
     public:
@@ -375,30 +336,18 @@ static std::string FooglarTypeStrArray[] = {"","ART","CAT","JEWEL"};
         struct FieldMESSAGE_SCHEMA_VERSION {
             std::string MESSAGE_SCHEMA_VERSION = "1.0.0";
             bool optional = false;
-            int dimensionality = 0;
-            std::string typeIdentifier = "string";
-            bool staticConstValue = true;
         } MESSAGE_SCHEMA_VERSION;
         struct Fieldid {
             int64_t id;
             bool optional = false;
-            int dimensionality = 0;
-            std::string typeIdentifier = "int64";
-            bool staticConstValue = false;
         } id;
         struct Fielddescription {
             std::string description;
             bool optional = false;
-            int dimensionality = 0;
-            std::string typeIdentifier = "string";
-            bool staticConstValue = false;
         } description;
         struct Fieldsuspects {
             std::vector<Fooglar> suspects;
             bool optional = false;
-            int dimensionality = 1;
-            std::string typeIdentifier = "Fooglar";
-            bool staticConstValue = false;
         } suspects;
         bool bToJson = false;
     public:
@@ -498,44 +447,26 @@ static std::string FooglarTypeStrArray[] = {"","ART","CAT","JEWEL"};
         struct FieldMESSAGE_SCHEMA_VERSION {
             std::string MESSAGE_SCHEMA_VERSION = "1.0.0";
             bool optional = false;
-            int dimensionality = 0;
-            std::string typeIdentifier = "string";
-            bool staticConstValue = true;
         } MESSAGE_SCHEMA_VERSION;
         struct Fieldname {
             std::string name;
             bool optional = false;
-            int dimensionality = 0;
-            std::string typeIdentifier = "string";
-            bool staticConstValue = false;
         } name;
         struct Fieldalcoholic {
             bool alcoholic;
             bool optional = true;
-            int dimensionality = 0;
-            std::string typeIdentifier = "boolean";
-            bool staticConstValue = false;
         } alcoholic;
         struct FieldlooseCannon {
             bool looseCannon;
             bool optional = true;
-            int dimensionality = 0;
-            std::string typeIdentifier = "boolean";
-            bool staticConstValue = false;
         } looseCannon;
         struct Fieldcases {
             std::vector<Case> cases;
             bool optional = false;
-            int dimensionality = 1;
-            std::string typeIdentifier = "Case";
-            bool staticConstValue = false;
         } cases;
         struct FielddirectReports {
             std::vector<Footective> directReports;
             bool optional = false;
-            int dimensionality = 1;
-            std::string typeIdentifier = "Footective";
-            bool staticConstValue = false;
         } directReports;
         bool bToJson = false;
     public:

@@ -12,7 +12,6 @@ export class CppGenerator implements SomsGenerator {
     
 
     private UDTs          : Map<string, string> = new Map();
-    private EnumMemberMap : Map<string, string> = new Map();
 
     private transpilationBuffer     : string = "";
     private fileName                : string = "";
@@ -61,16 +60,24 @@ export class CppGenerator implements SomsGenerator {
         }
     }
 
-    private resolveDimensionality() {
-        
-    }
+    private resolveDimensionality(resolvedType : string, dimensionality : number) : string {
+        let resolvedTypeDimensionality : string = "";
+        switch (dimensionality) {
+            case 0:
+                resolvedTypeDimensionality = `${resolvedType}`;
+                break;
+            case 1:
+                resolvedTypeDimensionality = `std::vector<${resolvedType}>`;
+                break;
+            case 2:
+                resolvedTypeDimensionality = `std::vector<std::vector<${resolvedType}>>`;
+                break;
+            case 3:
+                resolvedTypeDimensionality = `std::vector<std::vector<std::vector<${resolvedType}>>>`;
+                break;
 
-    private buildGetters() {
-
-    }
-
-    private buildSetters() {
-
+        }
+        return resolvedTypeDimensionality;
     }
 
     private transpileClasses(somsPackage : SomsPackage) : void {
@@ -84,42 +91,13 @@ export class CppGenerator implements SomsGenerator {
                 let resolvedType : string = this.resolveType(somsField.typeIdentifier.name);
 
                 //getters/setters
-                switch (somsField.dimensionality) {
-                    case 0:
-                        this.transpilationBuffer += this.padString(`const ${resolvedType} get${somsField.name}() const {\n`, this.TAB*2);
-                        break;
-                    case 1:
-                        this.transpilationBuffer += this.padString(`const std::vector<${resolvedType}> get${somsField.name}() const {\n`, this.TAB*2);
-                        break;
-                    case 2:
-                        this.transpilationBuffer += this.padString(`const std::vector<std::vector<${resolvedType}>> get${somsField.name}() const {\n`, this.TAB*2);
-                        break;
-                    case 3:
-                        this.transpilationBuffer += this.padString(`const std::vector<std::vector<std::vector<${resolvedType}>>> get${somsField.name}() const {\n`, this.TAB*2);
-                        break;
-
-                }
-
-               
+                this.transpilationBuffer += this.padString(`const ${this.resolveDimensionality(resolvedType, somsField.dimensionality)} get${somsField.name}() const {\n`, this.TAB*2);   
                 this.transpilationBuffer += this.padString(`return this->${somsField.name}.${somsField.name};\n`, this.TAB*3);
                 this.transpilationBuffer += this.padString(`};\n\n`, this.TAB*2);
                 
                 
                 if (!somsField.staticConst) {
-                    switch (somsField.dimensionality) {
-                    case 0:
-                        this.transpilationBuffer += this.padString(`void set${somsField.name}(${resolvedType} value) {\n`, this.TAB*2);
-                        break;
-                    case 1:
-                        this.transpilationBuffer += this.padString(`void set${somsField.name}(std::vector<${resolvedType}> value) {\n`, this.TAB*2);
-                        break;
-                    case 2:
-                        this.transpilationBuffer += this.padString(`void set${somsField.name}(std::vector<std::vector<${resolvedType}>> value) {\n`, this.TAB*2);
-                        break;
-                    case 3:
-                        this.transpilationBuffer += this.padString(`void set${somsField.name}(std::vector<std::vector<std::vector<${resolvedType}>>> value) {\n`, this.TAB*2);
-                        break;
-                    }
+                    this.transpilationBuffer += this.padString(`void set${somsField.name}(${this.resolveDimensionality(resolvedType, somsField.dimensionality)} value) {\n`, this.TAB*2);
                     this.transpilationBuffer += this.padString(`this->${somsField.name}.${somsField.name} = value;\n`, this.TAB*3);
                     this.transpilationBuffer += this.padString(`};\n`, this.TAB*2);
                 }
@@ -136,22 +114,8 @@ export class CppGenerator implements SomsGenerator {
                 if (somsField.staticConst) {
                     fieldDefinition  += ""; //TO BE IMPLEMENTED, const causes encapsulating containers, i.e. vector operator= to be deleted. Maybe a copy constructor for field struct type?
                 }
-
-                switch (somsField.dimensionality) {
-                    case 0:
-                        fieldDefinition += `${resolvedType} `;
-                        break;
-                    case 1:
-                        fieldDefinition += `std::vector<${resolvedType}> `;
-                        break;
-                    case 2:
-                        fieldDefinition += `std::vector<std::vector<${resolvedType}>> `;
-                        break;
-                    case 3:
-                        fieldDefinition += `std::vector<std::vector<std::vector<${resolvedType}>>> `;
-                        break;
-                }
-                
+                fieldDefinition += `${this.resolveDimensionality(resolvedType, somsField.dimensionality)} `;
+                    
                 if (somsField.name) fieldDefinition         += `${somsField.name}`;
                 if (somsField.staticConst) {
 
@@ -172,11 +136,8 @@ export class CppGenerator implements SomsGenerator {
                 fieldDefinition += ";\n";
                 this.transpilationBuffer += this.padString(fieldDefinition, this.TAB*3);
 
-                this.transpilationBuffer += this.padString(`bool optional = ${somsField.optional};\n`,                      this.TAB*3);
-                this.transpilationBuffer += this.padString(`int dimensionality = ${somsField.dimensionality};\n`,           this.TAB*3);
-                this.transpilationBuffer += this.padString(`std::string typeIdentifier = "${somsField.typeIdentifier.name}";\n`, this.TAB*3);
-                this.transpilationBuffer += this.padString(`bool staticConstValue = ${somsField.staticConst};\n`,      this.TAB*3);
-                this.transpilationBuffer += this.padString(`} ${somsField.name};\n`,                                      this.TAB*2);
+                this.transpilationBuffer += this.padString(`bool optional = ${somsField.optional};\n`, this.TAB*3);
+                this.transpilationBuffer += this.padString(`} ${somsField.name};\n`,                   this.TAB*2);
             }
             this.transpilationBuffer += this.padString(`bool bToJson = false;\n`, this.TAB*2);
             this.transpilationBuffer += this.padString("public:\n", this.TAB);
