@@ -192,37 +192,34 @@ export class CppGenerator implements SomsGenerator {
         fields.forEach(field => {
             let fieldIdentifier : string = field.typeIdentifier.name;
 
-            if (!field.staticConst) {
-                if (this.primitiveMap.has(fieldIdentifier) || (this.UDTs.has(fieldIdentifier) && this.UDTs.get(fieldIdentifier) != "enum")) {
-                    
-                    serializeMethod +=     this.padString(`s.Serialize("${field.name}", ${field.name}.${field.name});\n`, this.TAB*3);
-                }
-                else {
-                    serializeMethod +=     this.padString(`if (this->bToJson) {\n`, this.TAB*3);
-                    serializeMethod +=     this.padString(`unsigned int ${fieldIdentifier}enumIndex = 0;\n`, this.TAB*4)
-                    serializeMethod +=     this.padString(`unsigned int ${fieldIdentifier}length = sizeof(${fieldIdentifier}StrArray) / sizeof(std::string);\n`, this.TAB*4);
-                    serializeMethod +=     this.padString(`for (int i = 0; i < ${fieldIdentifier}length; i++) {\n`, this.TAB*4);
-                    serializeMethod +=     this.padString(`if (${fieldIdentifier}StrArray[i].find(${fieldIdentifier}StrArray[${field.name}.${field.name}], 0) != std::string::npos) {\n`, this.TAB*5);
-                    serializeMethod +=     this.padString(`${field.typeIdentifier.name}enumIndex = i;\n`, this.TAB*6);
-                    serializeMethod +=     this.padString(`break;\n`, this.TAB*6);
-                    serializeMethod +=     this.padString(`}\n`, this.TAB*5);
-                    serializeMethod +=     this.padString(`}\n`, this.TAB*4);
-                    serializeMethod +=     this.padString(`s.Serialize("${field.name}",${fieldIdentifier}StrArray[${field.name}.${field.name}]);\n`, this.TAB*4);
-                    serializeMethod +=     this.padString(`}\n`, this.TAB*3);
-                    serializeMethod +=     this.padString(`else {\n`, this.TAB*3);
-                    serializeMethod +=     this.padString(`std::string enumValue;\n`, this.TAB*4);
-                    serializeMethod +=     this.padString(`s.Serialize("${field.name}", enumValue);\n`, this.TAB*4);
-                    serializeMethod +=     this.padString(`unsigned int ${fieldIdentifier}enumIndex = 0;\n`, this.TAB*4)
-                    serializeMethod +=     this.padString(`unsigned int ${fieldIdentifier}length = sizeof(${fieldIdentifier}StrArray) / sizeof(std::string);\n`, this.TAB*4);
-                    serializeMethod +=     this.padString(`for (int i = 0; i < ${fieldIdentifier}length; i++) {\n`, this.TAB*4);
-                    serializeMethod +=     this.padString(`if (${fieldIdentifier}StrArray[i].find(enumValue, 0) != std::string::npos) {\n`, this.TAB*5);
-                    serializeMethod +=     this.padString(`${fieldIdentifier}enumIndex = i;\n`, this.TAB*6);
-                    serializeMethod +=     this.padString(`break;\n`, this.TAB*6);
-                    serializeMethod +=     this.padString(`}\n`, this.TAB*5);
-                    serializeMethod +=     this.padString(`}\n`, this.TAB*4);
-                    serializeMethod +=     this.padString(`${field.name}.${field.name} = ${fieldIdentifier}(${fieldIdentifier}enumIndex);\n`, this.TAB*4);
-                    serializeMethod +=     this.padString(`}\n`, this.TAB*3);
-                }
+            if (this.primitiveMap.has(fieldIdentifier) || (this.UDTs.has(fieldIdentifier) && this.UDTs.get(fieldIdentifier) != "enum")) {                
+                serializeMethod +=     this.padString(`s.Serialize("${field.name}", ${field.name}.${field.name});\n`, this.TAB*3);
+            }
+            else {
+                serializeMethod +=     this.padString(`if (this->bToJson) {\n`, this.TAB*3);
+                serializeMethod +=     this.padString(`unsigned int ${fieldIdentifier}enumIndex = 0;\n`, this.TAB*4)
+                serializeMethod +=     this.padString(`unsigned int ${fieldIdentifier}length = sizeof(${fieldIdentifier}StrArray) / sizeof(std::string);\n`, this.TAB*4);
+                serializeMethod +=     this.padString(`for (int i = 0; i < ${fieldIdentifier}length; i++) {\n`, this.TAB*4);
+                serializeMethod +=     this.padString(`if (${fieldIdentifier}StrArray[i].find(${fieldIdentifier}StrArray[${field.name}.${field.name}], 0) != std::string::npos) {\n`, this.TAB*5);
+                serializeMethod +=     this.padString(`${field.typeIdentifier.name}enumIndex = i;\n`, this.TAB*6);
+                serializeMethod +=     this.padString(`break;\n`, this.TAB*6);
+                serializeMethod +=     this.padString(`}\n`, this.TAB*5);
+                serializeMethod +=     this.padString(`}\n`, this.TAB*4);
+                serializeMethod +=     this.padString(`s.Serialize("${field.name}",${fieldIdentifier}StrArray[${field.name}.${field.name}]);\n`, this.TAB*4);
+                serializeMethod +=     this.padString(`}\n`, this.TAB*3);
+                serializeMethod +=     this.padString(`else {\n`, this.TAB*3);
+                serializeMethod +=     this.padString(`std::string enumValue;\n`, this.TAB*4);
+                serializeMethod +=     this.padString(`s.Serialize("${field.name}", enumValue);\n`, this.TAB*4);
+                serializeMethod +=     this.padString(`unsigned int ${fieldIdentifier}enumIndex = 0;\n`, this.TAB*4)
+                serializeMethod +=     this.padString(`unsigned int ${fieldIdentifier}length = sizeof(${fieldIdentifier}StrArray) / sizeof(std::string);\n`, this.TAB*4);
+                serializeMethod +=     this.padString(`for (int i = 0; i < ${fieldIdentifier}length; i++) {\n`, this.TAB*4);
+                serializeMethod +=     this.padString(`if (${fieldIdentifier}StrArray[i].find(enumValue, 0) != std::string::npos) {\n`, this.TAB*5);
+                serializeMethod +=     this.padString(`${fieldIdentifier}enumIndex = i;\n`, this.TAB*6);
+                serializeMethod +=     this.padString(`break;\n`, this.TAB*6);
+                serializeMethod +=     this.padString(`}\n`, this.TAB*5);
+                serializeMethod +=     this.padString(`}\n`, this.TAB*4);
+                serializeMethod +=     this.padString(`${field.name}.${field.name} = ${fieldIdentifier}(${fieldIdentifier}enumIndex);\n`, this.TAB*4);
+                serializeMethod +=     this.padString(`}\n`, this.TAB*3);
             }
         });
         serializeMethod         += this.padString(`};\n\n`, this.TAB*2);
@@ -233,13 +230,11 @@ export class CppGenerator implements SomsGenerator {
         serdeMethodFromJson     += this.padString(`if (!reader.parse(json, root)) {}\n\n`, this.TAB*3);
 
         fields.forEach(field => {
-            if (!field.staticConstValue) {
-                serdeMethodFromJson += this.padString(`if (!root.isMember("${field.name}")) {\n`, this.TAB*3);
-                serdeMethodFromJson += this.padString(`if (!this->${field.name}.optional) {\n`, this.TAB*4);
-                serdeMethodFromJson += this.padString(`return false;\n`, this.TAB*5);
-                serdeMethodFromJson += this.padString(`}\n`, this.TAB*4);
-                serdeMethodFromJson += this.padString(`}\n`, this.TAB*3);
-            }
+            serdeMethodFromJson += this.padString(`if (!root.isMember("${field.name}")) {\n`, this.TAB*3);
+            serdeMethodFromJson += this.padString(`if (!this->${field.name}.optional) {\n`, this.TAB*4);
+            serdeMethodFromJson += this.padString(`return false;\n`, this.TAB*5);
+            serdeMethodFromJson += this.padString(`}\n`, this.TAB*4);
+            serdeMethodFromJson += this.padString(`}\n`, this.TAB*3);
         });
 
         serdeMethodFromJson     += this.padString(`this->bToJson = false;\n`, this.TAB*3);
@@ -256,13 +251,11 @@ export class CppGenerator implements SomsGenerator {
         fields.forEach(field => {
             let fieldIdentifier : string = field.typeIdentifier.name;
 
-            if (!field.staticConstValue) {
-                if (this.primitiveMap.has(fieldIdentifier) || (this.UDTs.has(fieldIdentifier) && this.UDTs.get(fieldIdentifier) != "enum")) {
-                    serdeMethodToJson +=     this.padString(`s.Serialize("${field.name}", ${field.name}.${field.name});\n`, this.TAB*3);
-                }
-                else {
-                    serdeMethodToJson +=     this.padString(`s.Serialize("${field.name}", ${field.typeIdentifier.name}StrArray[${field.name}.${field.name}]);\n`, this.TAB*3);
-                }
+            if (this.primitiveMap.has(fieldIdentifier) || (this.UDTs.has(fieldIdentifier) && this.UDTs.get(fieldIdentifier) != "enum")) {
+                serdeMethodToJson +=     this.padString(`s.Serialize("${field.name}", ${field.name}.${field.name});\n`, this.TAB*3);
+            }
+            else {
+                serdeMethodToJson +=     this.padString(`s.Serialize("${field.name}", ${field.typeIdentifier.name}StrArray[${field.name}.${field.name}]);\n`, this.TAB*3);
             }
         });
         serdeMethodToJson      +=  this.padString(`return s.JsonValue;\n`, this.TAB*3);

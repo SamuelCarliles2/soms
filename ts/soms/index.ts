@@ -20,16 +20,3 @@ new TsGenerator()
         fs.writeFileSync(cfg.outDir + "/" + s.filename, s.source);
     }
 );
-
-/*
-new CppGenerator()
-.generate(Somspiler.fromConfig(cfg).somspile())
-.map(
-    s => {
-        console.log(s.filename);
-        console.log(s.source);
-        fs.writeFileSync(".\\" + s.filename.split("\\")[s.filename.split("\\").length-1], s.source);
-    }
-);
-
-*/
