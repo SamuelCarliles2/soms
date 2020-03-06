@@ -61,10 +61,10 @@ export class Fooglar implements FooglarLite {
             yearOfBirth: this.yearOfBirth,
             fooglarType: JSON.stringify(this.fooglarType),
             heightInKm: this.heightInKm,
-            aliases: this.aliases,
-            aliasAliases: this.aliasAliases,
-            threedeeDouble: this.threedeeDouble,
-            intsAPoppin: this.intsAPoppin
+            aliases: this.aliases.map(v => v),
+            aliasAliases: this.aliasAliases.map(v => v.map(v => v)),
+            threedeeDouble: this.threedeeDouble.map(v => v.map(v => v.map(v => v))),
+            intsAPoppin: this.intsAPoppin.map(v => v.map(v => v.map(v => v)))
         };
     }
 }

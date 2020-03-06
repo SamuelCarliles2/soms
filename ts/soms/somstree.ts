@@ -5,6 +5,11 @@ export enum SomsNodeType {
     SOMSPACKAGE = "SOMSPACKAGE"
 }
 
+export enum SomsUdtType {
+    SOMSENUM = "SOMSENUM",
+    SOMSCLASS = "SOMSCLASS"
+}
+
 export interface SomsTreeNode {
     readonly somsNodeType: SomsNodeType;
     readonly name: string;
@@ -27,6 +32,7 @@ export class SomsField implements SomsTreeNode {
 
     readonly name: string;
     readonly typeIdentifier: SomsTypeIdentifier;
+    readonly udtType: SomsUdtType | null;
     readonly dimensionality: number;
     readonly optional: boolean;
     readonly staticConst: boolean;
@@ -35,6 +41,7 @@ export class SomsField implements SomsTreeNode {
     constructor(f: SomsFieldLite) {
         this.name = f.name;
         this.typeIdentifier = f.typeIdentifier;
+        this.udtType = f.udtType ? f.udtType : null;
         this.dimensionality = f.dimensionality ? f.dimensionality : 0;
         this.optional = f.optional ? f.optional : false;
         this.staticConst = f.staticConst ? f.staticConst : false;
@@ -84,6 +91,7 @@ export interface SomsEnumLite {
 export interface SomsFieldLite {
     readonly name: string;
     readonly typeIdentifier: SomsTypeIdentifier;
+    readonly udtType?: SomsUdtType | null;
     readonly dimensionality?: number;
     readonly optional?: boolean;
     readonly staticConst?: boolean;
@@ -102,36 +110,45 @@ export interface SomsPackageLite {
 }
 
 
-export class SomsTypeIdentifier {
+// export type SomsNumberType = "int64" | "double";
+// export type SomsPrimitiveType = SomsNumberType | "boolean" | "string";
+
+export interface SomsTypeIdentifier {
+    readonly name: string;
+}
+
+export interface SomsPrimitiveType extends SomsTypeIdentifier {
+    readonly isSomsPrimitiveType: boolean;
+}
+
+export interface SomsNumberType extends SomsPrimitiveType {
+    readonly isSomsNumberType: boolean;
+}
+
+export class SomsInt64TypeIdentifier implements SomsNumberType {
+    readonly isSomsNumberType = true;
+    readonly isSomsPrimitiveType = true;
+    readonly name = "int64";
+}
+
+export class SomsDoubleTypeIdentifier implements SomsNumberType {
+    readonly isSomsNumberType = true;
+    readonly isSomsPrimitiveType = true;
+    readonly name = "double";
+}
+
+export class SomsBooleanTypeIdentifier implements SomsPrimitiveType {
+    readonly isSomsPrimitiveType = true;
+    readonly name = "boolean";
+}
+
+export class SomsStringTypeIdentifier implements SomsPrimitiveType {
+    readonly isSomsPrimitiveType = true;
+    readonly name = "string";
+}
+
+export class SomsUserDefinedTypeIdentifier implements SomsTypeIdentifier {
     constructor(readonly name: string) {}
-}
-
-export class SomsPrimitiveType extends SomsTypeIdentifier {
-    constructor(readonly name: string) { super(name); }
-}
-
-export class SomsNumberType extends SomsPrimitiveType {
-    constructor(readonly name: string) { super(name); }
-}
-
-export class SomsInt64TypeIdentifier extends SomsNumberType {
-    constructor() { super("int64"); }
-}
-
-export class SomsDoubleTypeIdentifier extends SomsNumberType {
-    constructor() { super("double"); }
-}
-
-export class SomsBooleanTypeIdentifier extends SomsPrimitiveType {
-    constructor() { super("boolean"); }
-}
-
-export class SomsStringTypeIdentifier extends SomsPrimitiveType {
-    constructor() { super("string"); }
-}
-
-export class SomsUserDefinedTypeIdentifier extends SomsTypeIdentifier {
-    constructor(readonly name: string) { super(name); }
 }
 
 export class SomsEnumTypeIdentifier extends SomsUserDefinedTypeIdentifier {
@@ -142,6 +159,11 @@ export class SomsClassTypeIdentifier extends SomsUserDefinedTypeIdentifier {
     constructor(readonly name: string) { super(name); }
 }
 
+const SomsNumberTypeList : any = {
+    int64: 0,
+    double: 1
+};
+
 const SomsPrimitiveTypeList : any = {
     boolean: 0,
     int64: 1,
@@ -149,11 +171,29 @@ const SomsPrimitiveTypeList : any = {
     string: 3
 };
 
+// export function isSomsNumberType(t: SomsTypeIdentifier | string)
+//     : t is SomsNumberType
+// {
+//     return t in SomsNumberTypeList;
+// }
+//
 export function isSomsPrimitiveType(t: SomsTypeIdentifier | string)
     : t is SomsPrimitiveType
 {
-    return t instanceof SomsPrimitiveType || t in SomsPrimitiveTypeList;
+    return t in SomsPrimitiveTypeList;
 }
+
+// export function isSomsEnumOrClassIdentifier(t: SomsTypeIdentifier)
+//     : t is SomsEnumOrClassIdentifier
+// {
+//     return t && !isSomsPrimitiveType(t) && "name" in t;
+// }
+//
+// export interface SomsEnumOrClassIdentifier {
+//     readonly name: string;
+// }
+
+// export type SomsTypeIdentifier = SomsPrimitiveType | SomsEnumOrClassIdentifier;
 
 export interface SomsEnumValueReference {
     readonly enumName: string;
