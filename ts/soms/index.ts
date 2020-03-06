@@ -1,3 +1,4 @@
+/*
 MIT License
 
 Copyright (c) 2020 Samuel Carliles
@@ -19,3 +20,25 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+*/
+
+import * as fs from "fs";
+
+import {ConcreteSomsConfig, SomsConfig, Somspiler} from "./somspiler";
+import {TsGenerator} from "./generators/tsgen";
+
+const cfg = new ConcreteSomsConfig(
+    <SomsConfig>JSON.parse(
+        fs.readFileSync("./somsconfig.json").toString()
+    )
+);
+
+new TsGenerator()
+.generate(Somspiler.fromConfig(cfg).somspile())
+.map(
+    s => {
+        const dirName = (cfg.outDir + "/" + s.filename).replace(new RegExp("/[^/]+$"), "");
+        fs.mkdirSync(dirName, { recursive: true });
+        fs.writeFileSync(cfg.outDir + "/" + s.filename, s.source);
+    }
+);

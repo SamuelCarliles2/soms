@@ -1,0 +1,18 @@
+{
+  "name": "soms-examples",
+  "version": "1.0.0",
+  "author": "Samuel Carliles",
+  "license": "MIT",
+  "scripts": {
+    "build-example-soms": "node node_modules/soms/index.js",
+    "build-example-ts": "tsc",
+    "build": "npm run build-example-soms && npm run build-example-ts"
+  },
+  "dependencies": {
+    "node": "12.16.0",
+    "soms": "file:../ts/dist/soms"
+  },
+  "devDependencies": {
+    "@types/node": "12.12.6"
+  }
+}
