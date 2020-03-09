@@ -52,7 +52,7 @@ export class TsGenerator implements SomsGenerator
 
         return {
             source: (enumSrc ? enumSrc + "\n" : "") + (classesSrc ? classesSrc : ""),
-            filename: p.name.replace(".", "/") + "/index.ts"
+            filename: p.name.replace(new RegExp("\\.", "g"), "/") + "/index.ts"
         };
     }
 
@@ -235,7 +235,8 @@ export class TsGenerator implements SomsGenerator
 
         return "export interface " + interfaceName + " {\n"
             + (staticConst.length > 0 ? staticConst + "\n" : "")
-            + (instance.length > 0 ? "\n" + instance + "\n" : "")
+            + (staticConst.length > 0 && instance.length > 0 ? "\n" : "")
+            + (instance.length > 0 ? instance + "\n" : "")
             + "}\n";
     }
 
