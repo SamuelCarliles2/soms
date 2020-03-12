@@ -3,20 +3,34 @@
   "version": "0.1.0",
   "description": "Simple, Opinionated Message Schema",
   "main": "index.js",
-  "directories": {
-    "example": "examples"
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SamuelCarliles2/soms.git"
   },
-  "author": "",
-  "license": "MIT",
   "bugs": {
     "url": "https://github.com/SamuelCarliles2/soms/issues"
   },
-  "homepage": "https://github.com/SamuelCarliles2/soms#readme"
+  "homepage": "https://github.com/SamuelCarliles2/soms#readme",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [
+    "soms",
+    "message",
+    "schema",
+    "protobuf",
+    "json"
+  ],
+  "author": "Samuel Carliles",
+  "license": "MIT",
+  "dependencies": {
+    "eslint": "6.8.0",
+    "node": "12.16.0",
+    "typescript": "3.8.2",
+    "@typescript-eslint/parser": "2.21.0",
+    "@typescript-eslint/typescript-estree": "2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "12.12.6"
+  }
 }

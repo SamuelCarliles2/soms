@@ -5,14 +5,15 @@
     "noImplicitReturns": true,
     "noImplicitThis": true,
     "outDir": "./dist",
-    "rootDir": ".",
-    "sourceRoot": "soms",
+    "rootDir": "./ts",
+    "sourceRoot": "./soms",
     "sourceMap": true,
     "strict": true,
     "target": "es5"
   },
   "exclude": [
     "dist",
+    "examples",
     "node_modules"
   ]
 }
