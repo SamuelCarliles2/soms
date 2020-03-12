@@ -60,7 +60,7 @@ export class TsGenerator implements SomsGenerator
         return "export enum " + e.name + " {\n"
             + e.values.map(v => "    " + v + " = \"" + v + "\"").join(",\n")
             + "\n}\n\n"
-            + "const " + e.name + "Map : any = {\n"
+            + "export const " + e.name + "Map : any = {\n"
             + e.values.map(v => "    " + v + ": " + e.name + "." + v).join(",\n")
             + "\n};\n";
     }

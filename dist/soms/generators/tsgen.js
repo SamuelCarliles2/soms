@@ -45,7 +45,7 @@ var TsGenerator = /** @class */ (function () {
         return "export enum " + e.name + " {\n"
             + e.values.map(function (v) { return "    " + v + " = \"" + v + "\""; }).join(",\n")
             + "\n}\n\n"
-            + "const " + e.name + "Map : any = {\n"
+            + "export const " + e.name + "Map : any = {\n"
             + e.values.map(function (v) { return "    " + v + ": " + e.name + "." + v; }).join(",\n")
             + "\n};\n";
     };
