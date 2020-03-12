@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-
+"use strict";
 /*
 MIT License
 
@@ -23,24 +23,16 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
-
-import * as fs from "fs";
-
-import {ConcreteSomsConfig, SomsConfig, Somspiler} from "./somspiler";
-import {TsGenerator} from "./generators/tsgen";
-
-const cfg = new ConcreteSomsConfig(
-    <SomsConfig>JSON.parse(
-        fs.readFileSync("./somsconfig.json").toString()
-    )
-);
-
-new TsGenerator()
-.generate(Somspiler.fromConfig(cfg).somspile())
-.map(
-    s => {
-        const dirName = (cfg.outDir + "/" + s.filename).replace(new RegExp("/[^/]+$"), "");
-        fs.mkdirSync(dirName, { recursive: true });
-        fs.writeFileSync(cfg.outDir + "/" + s.filename, s.source);
-    }
-);
+Object.defineProperty(exports, "__esModule", { value: true });
+var fs = require("fs");
+var somspiler_1 = require("./somspiler");
+var tsgen_1 = require("./generators/tsgen");
+var cfg = new somspiler_1.ConcreteSomsConfig(JSON.parse(fs.readFileSync("./somsconfig.json").toString()));
+new tsgen_1.TsGenerator()
+    .generate(somspiler_1.Somspiler.fromConfig(cfg).somspile())
+    .map(function (s) {
+    var dirName = (cfg.outDir + "/" + s.filename).replace(new RegExp("/[^/]+$"), "");
+    fs.mkdirSync(dirName, { recursive: true });
+    fs.writeFileSync(cfg.outDir + "/" + s.filename, s.source);
+});
+//# sourceMappingURL=index.js.map
