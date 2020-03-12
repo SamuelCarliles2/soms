@@ -1,8 +1,10 @@
 {
   "name": "soms",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Simple, Opinionated Message Schema",
-  "main": "dist/soms/index.js",
+  "bin": {
+    "soms": "dist/soms/index.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SamuelCarliles2/soms.git"
