@@ -114,7 +114,8 @@ var TsGenerator = /** @class */ (function () {
                     + ")".repeat(f.dimensionality);
             }
             else {
-                return f.name + ": " + f.typeIdentifier.name + ".fromJson(v)";
+                return f.name + ": " + f.typeIdentifier.name + ".fromJson("
+                    + sourceName + "." + f.name + ")";
             }
         }
         else {

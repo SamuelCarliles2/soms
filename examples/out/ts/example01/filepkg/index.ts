@@ -1,5 +1,4 @@
 export interface OneMoreLite {
-
     name: string;
 }
 
