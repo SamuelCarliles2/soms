@@ -4,7 +4,7 @@ export enum FooglarType {
     JEWEL = "JEWEL"
 }
 
-const FooglarTypeMap : any = {
+export const FooglarTypeMap : any = {
     ART: FooglarType.ART,
     CAT: FooglarType.CAT,
     JEWEL: FooglarType.JEWEL

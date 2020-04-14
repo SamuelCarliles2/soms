@@ -52,7 +52,7 @@ export class TsGenerator implements SomsGenerator
 
         return {
             source: (enumSrc ? enumSrc + "\n" : "") + (classesSrc ? classesSrc : ""),
-            filename: p.name.replace(".", "/") + "/index.ts"
+            filename: p.name.replace(new RegExp("\\.", "g"), "/") + "/index.ts"
         };
     }
 
@@ -60,7 +60,7 @@ export class TsGenerator implements SomsGenerator
         return "export enum " + e.name + " {\n"
             + e.values.map(v => "    " + v + " = \"" + v + "\"").join(",\n")
             + "\n}\n\n"
-            + "const " + e.name + "Map : any = {\n"
+            + "export const " + e.name + "Map : any = {\n"
             + e.values.map(v => "    " + v + ": " + e.name + "." + v).join(",\n")
             + "\n};\n";
     }
@@ -138,7 +138,8 @@ export class TsGenerator implements SomsGenerator
                     + ")".repeat(f.dimensionality);
             }
             else {
-                return f.name + ": " + f.typeIdentifier.name + ".fromJson(v)";
+                return f.name + ": " + f.typeIdentifier.name + ".fromJson("
+                    + sourceName + "." + f.name + ")";
             }
         }
         else {
@@ -235,7 +236,8 @@ export class TsGenerator implements SomsGenerator
 
         return "export interface " + interfaceName + " {\n"
             + (staticConst.length > 0 ? staticConst + "\n" : "")
-            + (instance.length > 0 ? "\n" + instance + "\n" : "")
+            + (staticConst.length > 0 && instance.length > 0 ? "\n" : "")
+            + (instance.length > 0 ? instance + "\n" : "")
             + "}\n";
     }
 
