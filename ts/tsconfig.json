@@ -9,7 +9,7 @@
     "sourceRoot": "soms",
     "sourceMap": true,
     "strict": true,
-    "target": "es2017"
+    "target": "es5"
   },
   "exclude": [
     "dist",

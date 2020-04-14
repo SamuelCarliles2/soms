@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2020 Samuel Carliles
+Copyright (c) 2020 Samuel Carliles, Marcus Hansen, and Promit Roy
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,8 +24,13 @@ SOFTWARE.
 
 import * as fs from "fs";
 
-import {ConcreteSomsConfig, SomsConfig, Somspiler} from "./somspiler";
+import {
+    ConcreteSomsConfig, SomsConfig, SomsGeneratorConfig, Somspiler
+} from "./somspiler";
 import {TsGenerator} from "./generators/tsgen";
+import {SomsPackage} from "./somstree";
+import {FileSource, SomsGenerator} from "./somsgenerator";
+import {CppGenerator} from "./generators/cppgen";
 
 const cfg = new ConcreteSomsConfig(
     <SomsConfig>JSON.parse(
@@ -33,12 +38,44 @@ const cfg = new ConcreteSomsConfig(
     )
 );
 
-new TsGenerator()
-.generate(Somspiler.fromConfig(cfg).somspile())
-.map(
-    s => {
-        const dirName = (cfg.outDir + "/" + s.filename).replace(new RegExp("/[^/]+$"), "");
-        fs.mkdirSync(dirName, { recursive: true });
-        fs.writeFileSync(cfg.outDir + "/" + s.filename, s.source);
-    }
-);
+const main = async () : Promise<void> => {
+    const somsTrees: SomsPackage[] = Somspiler.fromConfig(cfg).somspile();
+    const pGenerators: Promise<SomsGenerator>[] = cfg.generators.map(
+        gc => (
+            async () : Promise<SomsGenerator> => {
+                const mod = await import("./" + gc.importPath);
+                return <SomsGenerator>(new mod[gc.className]());
+            }
+        )()
+    );
+    pGenerators.map(
+        (pGen, i) => {
+            pGen.then((gen: SomsGenerator) => {
+                const outDir =
+                    (cfg.outDir + "/" + cfg.generators[i].outDir + "/")
+                    .replace(new RegExp("/[^/]+$"), "")
+                    .replace(/\/+/g, "/");
+                gen.generate(somsTrees).map((s: FileSource) => {
+                    const filename = outDir + s.filename;
+                    const dirName = filename.substring(0, filename.lastIndexOf("/"));
+                    console.log("dirName: " + dirName);
+                    console.log("filename: " + filename);
+                    // fs.mkdirSync(dirName, { recursive: true });
+                    // fs.writeFileSync(filename, s.source);
+                });
+            });
+        }
+    );
+};
+
+
+// generators.map(g => g.generate(source))
+// new TsGenerator()
+// .generate(Somspiler.fromConfig(cfg).somspile())
+// .map(
+//     s => {
+//         const dirName = (cfg.outDir + "/" + s.filename).replace(new RegExp("/[^/]+$"), "");
+//         fs.mkdirSync(dirName, { recursive: true });
+//         fs.writeFileSync(cfg.outDir + "/" + s.filename, s.source);
+//     }
+// );

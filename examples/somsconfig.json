@@ -1,7 +1,16 @@
 {
   "packageRoot": "./soms",
-  "outDir": "./out/ts",
-  "generatorModuleNames": [
-    "ts"
+  "outDir": "./out",
+  "generators": [
+    {
+      "importPath": "generators/tsgen",
+      "className":  "TsGenerator",
+      "outDir":  "ts"
+    },
+    {
+      "importPath": "generators/cppgen",
+      "className":  "CppGenerator",
+      "outDir":  "cpp"
+    }
   ]
 }

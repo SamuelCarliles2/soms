@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2020 Samuel Carliles
+Copyright (c) 2020 Samuel Carliles, Marcus Hansen, and Promit Roy
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -39,10 +39,16 @@ import {
 import {FileSource, PackageSource} from "./somsgenerator";
 
 
+export interface SomsGeneratorConfig {
+    readonly importPath: string;
+    readonly className: string;
+    readonly outDir: string;
+}
+
 export interface SomsConfig {
     readonly packageRoot?: string;
     readonly outDir?: string;
-    readonly generatorModuleNames?: string[];
+    readonly generators: SomsGeneratorConfig[];
 }
 
 export class Somspiler {
@@ -512,12 +518,11 @@ export function toJson(v: any) {
 export class ConcreteSomsConfig implements SomsConfig {
     readonly packageRoot: string;
     readonly outDir: string;
-    readonly generatorModuleNames: string[];
+    readonly generators: SomsGeneratorConfig[];
 
     constructor(cfg?: SomsConfig) {
         this.packageRoot = cfg?.packageRoot ? cfg.packageRoot : "./";
         this.outDir = cfg?.outDir ? cfg.outDir : "./";
-        this.generatorModuleNames
-            = cfg?.generatorModuleNames ? cfg.generatorModuleNames : [];
+        this.generators = cfg?.generators ? cfg.generators : [];
     }
 }

@@ -1,3 +1,27 @@
+/*
+MIT License
+
+Copyright (c) 2020 Samuel Carliles, Marcus Hansen, and Promit Roy
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 import {FileSource, SomsGenerator, SomsGeneratorOptions} from "../somsgenerator";
 import { SomsPackage, SomsEnum, SomsTypeIdentifier,  SomsField } from "../somstree";
 
@@ -9,7 +33,7 @@ export class CppGenerator implements SomsGenerator {
         ["boolean", "bool"],
         ["double",  "double"],
     ]);
-    
+
 
     private UDTs          : Map<string, string> = new Map();
 
@@ -40,7 +64,8 @@ export class CppGenerator implements SomsGenerator {
     }
 
     private padString(str : string, width : number) : string {
-        return str.padStart(str.length+width);
+        // return str.padStart(str.length+width);
+        return " ".repeat(width) + str;
     }
 
     private transpileEnums(somsPackage : SomsPackage) : void {
@@ -54,9 +79,9 @@ export class CppGenerator implements SomsGenerator {
                 this.transpilationBuffer += (i + 1 >= somsEnum.values.length) ? `${somsEnum.values[i]}};\n` : `${somsEnum.values[i]},`;
                 indexedStringArray       += (i + 1 >= somsEnum.values.length) ? `"${somsEnum.values[i]}"};\n` : `"${somsEnum.values[i]}",`;
             }
-            
+
             //this string array will be placed in class definitions where the relevant enum type is referenced
-            this.transpilationBuffer += indexedStringArray; 
+            this.transpilationBuffer += indexedStringArray;
         }
     }
 
@@ -82,7 +107,7 @@ export class CppGenerator implements SomsGenerator {
 
     private transpileClasses(somsPackage : SomsPackage) : void {
         for (let somsClass of somsPackage.classes) {
-        
+
             this.UDTs.set(somsClass.name, "class");
             this.transpilationBuffer += this.padString(`class ${somsClass.name} {\n    public:\n`, this.TAB);
 
@@ -91,11 +116,11 @@ export class CppGenerator implements SomsGenerator {
                 let resolvedType : string = this.resolveType(somsField.typeIdentifier.name);
 
                 //getters/setters
-                this.transpilationBuffer += this.padString(`const ${this.resolveDimensionality(resolvedType, somsField.dimensionality)} get${somsField.name}() const {\n`, this.TAB*2);   
+                this.transpilationBuffer += this.padString(`const ${this.resolveDimensionality(resolvedType, somsField.dimensionality)} get${somsField.name}() const {\n`, this.TAB*2);
                 this.transpilationBuffer += this.padString(`return this->${somsField.name}.${somsField.name};\n`, this.TAB*3);
                 this.transpilationBuffer += this.padString(`};\n\n`, this.TAB*2);
-                
-                
+
+
                 if (!somsField.staticConst) {
                     this.transpilationBuffer += this.padString(`void set${somsField.name}(${this.resolveDimensionality(resolvedType, somsField.dimensionality)} value) {\n`, this.TAB*2);
                     this.transpilationBuffer += this.padString(`this->${somsField.name}.${somsField.name} = value;\n`, this.TAB*3);
@@ -109,21 +134,21 @@ export class CppGenerator implements SomsGenerator {
                 let resolvedType              = this.resolveType(somsField.typeIdentifier.name);
                 let fieldDefinition  : string = "";
                 this.transpilationBuffer     += this.padString(`struct Field${somsField.name} {\n`, this.TAB*2);
-                
+
 
                 if (somsField.staticConst) {
                     fieldDefinition  += ""; //TO BE IMPLEMENTED, const causes encapsulating containers, i.e. vector operator= to be deleted. Maybe a copy constructor for field struct type?
                 }
                 fieldDefinition += `${this.resolveDimensionality(resolvedType, somsField.dimensionality)} `;
-                    
+
                 if (somsField.name) fieldDefinition         += `${somsField.name}`;
                 if (somsField.staticConst) {
 
                     if (somsField.dimensionality == 0) {
-                        
+
                         if (this.UDTs.get(resolvedType) != "enum") {
-                            fieldDefinition += (resolvedType == "std::string") 
-                                                        ? ` = "${somsField.staticConstValue}"` 
+                            fieldDefinition += (resolvedType == "std::string")
+                                                        ? ` = "${somsField.staticConstValue}"`
                                                         : ` = ${somsField.staticConstValue}`;
                         }
                     }
@@ -153,7 +178,7 @@ export class CppGenerator implements SomsGenerator {
         fields.forEach(field => {
             let fieldIdentifier : string = field.typeIdentifier.name;
 
-            if (this.primitiveMap.has(fieldIdentifier) || (this.UDTs.has(fieldIdentifier) && this.UDTs.get(fieldIdentifier) != "enum")) {                
+            if (this.primitiveMap.has(fieldIdentifier) || (this.UDTs.has(fieldIdentifier) && this.UDTs.get(fieldIdentifier) != "enum")) {
                 serializeMethod +=     this.padString(`s.Serialize("${field.name}", ${field.name}.${field.name});\n`, this.TAB*3);
             }
             else {
@@ -184,7 +209,7 @@ export class CppGenerator implements SomsGenerator {
             }
         });
         serializeMethod         += this.padString(`};\n\n`, this.TAB*2);
-        
+
         let serdeMethodFromJson  = this.padString(`bool fromJson(const char* json) {\n`, this.TAB*2);
         serdeMethodFromJson     += this.padString(`Json::Value  root;\n\n`, this.TAB*3);
         serdeMethodFromJson     += this.padString(`Json::Reader reader;\n`, this.TAB*3);
@@ -205,7 +230,7 @@ export class CppGenerator implements SomsGenerator {
         serdeMethodFromJson     += this.padString(`return true;\n`, this.TAB*3);
         serdeMethodFromJson     += this.padString(`};\n\n`, this.TAB*2);
 
-        
+
         let serdeMethodToJson   =  this.padString(`Json::Value toJson() {\n`, this.TAB*2);
         serdeMethodToJson      +=  this.padString(`JsonSerializer s(true);\n`, this.TAB*3);
         serdeMethodToJson      +=  this.padString(`this->bToJson = true;\n`, this.TAB*3);
@@ -221,7 +246,7 @@ export class CppGenerator implements SomsGenerator {
         });
         serdeMethodToJson      +=  this.padString(`return s.JsonValue;\n`, this.TAB*3);
         serdeMethodToJson      +=  this.padString(`}\n`, this.TAB*2);
-        
+
         return serializeMethod + serdeMethodFromJson + serdeMethodToJson;
     }
 
