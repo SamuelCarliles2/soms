@@ -86,9 +86,6 @@ var main = function () { return __awaiter(void 0, void 0, void 0, function () {
                 gen.generate(somsTrees).map(function (s) {
                     var filename = outDir + s.filename;
                     var dirName = filename.substring(0, filename.lastIndexOf("/"));
-                    // console.log("dirName: " + dirName);
-                    // console.log("source.filename: " + s.filename);
-                    // console.log("filename: " + filename);
                     fs.mkdirSync(dirName, { recursive: true });
                     fs.writeFileSync(filename, s.source);
                 });
@@ -98,14 +95,4 @@ var main = function () { return __awaiter(void 0, void 0, void 0, function () {
     });
 }); };
 main().then();
-// generators.map(g => g.generate(source))
-// new TsGenerator()
-// .generate(Somspiler.fromConfig(cfg).somspile())
-// .map(
-//     s => {
-//         const dirName = (cfg.outDir + "/" + s.filename).replace(new RegExp("/[^/]+$"), "");
-//         fs.mkdirSync(dirName, { recursive: true });
-//         fs.writeFileSync(cfg.outDir + "/" + s.filename, s.source);
-//     }
-// );
 //# sourceMappingURL=index.js.map

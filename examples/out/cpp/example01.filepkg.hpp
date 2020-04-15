@@ -6,7 +6,7 @@
 #include <KataCore/JsonSerializer.h>
 #include <json/reader.h>
 
-namespace Soms {
+namespace Soms::example01::filepkg {
     class OneMore {
     public:
         const std::string getname() const {

@@ -42,7 +42,7 @@ export class CppGenerator implements SomsGenerator {
 
     private readonly headerGuard    : string = "#pragma once\n";
     private readonly stdIncludes    : string = "#include <string>\n#include <vector>\n#include <algorithm>\n#include <iterator>\n";
-    private readonly engineIncludes : string = "#include <KataCore/JsonSerializer.h>\n#include <json/reader.h>\n\nnamespace Soms {\n";
+    private readonly engineIncludes : string = "#include <KataCore/JsonSerializer.h>\n#include <json/reader.h>\n\n";
 
     private readonly TAB            : number = 4;
 
@@ -51,7 +51,13 @@ export class CppGenerator implements SomsGenerator {
     }
 
     private generateSource(somsPackage : SomsPackage) : FileSource {
-        this.transpilationBuffer = this.headerGuard + this.stdIncludes + this.engineIncludes;
+        this.transpilationBuffer =
+            this.headerGuard
+            + this.stdIncludes
+            + this.engineIncludes
+            + "namespace "
+            + ["Soms", somsPackage.name].join(".").replace(/\./g, "::")
+            + " {\n";
 
         this.transpileEnums(somsPackage);
         this.transpileClasses(somsPackage);

@@ -36,7 +36,7 @@ var CppGenerator = /** @class */ (function () {
         this.fileName = "";
         this.headerGuard = "#pragma once\n";
         this.stdIncludes = "#include <string>\n#include <vector>\n#include <algorithm>\n#include <iterator>\n";
-        this.engineIncludes = "#include <KataCore/JsonSerializer.h>\n#include <json/reader.h>\n\nnamespace Soms {\n";
+        this.engineIncludes = "#include <KataCore/JsonSerializer.h>\n#include <json/reader.h>\n\n";
         this.TAB = 4;
     }
     CppGenerator.prototype.generate = function (somspackages) {
@@ -44,7 +44,13 @@ var CppGenerator = /** @class */ (function () {
         return somspackages.map(function (p) { return _this.generateSource(p); });
     };
     CppGenerator.prototype.generateSource = function (somsPackage) {
-        this.transpilationBuffer = this.headerGuard + this.stdIncludes + this.engineIncludes;
+        this.transpilationBuffer =
+            this.headerGuard
+                + this.stdIncludes
+                + this.engineIncludes
+                + "namespace "
+                + ["Soms", somsPackage.name].join(".").replace(/\./g, "::")
+                + " {\n";
         this.transpileEnums(somsPackage);
         this.transpileClasses(somsPackage);
         this.transpilationBuffer += "};\n";
