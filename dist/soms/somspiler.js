@@ -2,7 +2,7 @@
 /*
 MIT License
 
-Copyright (c) 2020 Samuel Carliles
+Copyright (c) 2020 Samuel Carliles, Marcus Hansen, and Promit Roy
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -364,8 +364,7 @@ var ConcreteSomsConfig = /** @class */ (function () {
     function ConcreteSomsConfig(cfg) {
         this.packageRoot = (cfg === null || cfg === void 0 ? void 0 : cfg.packageRoot) ? cfg.packageRoot : "./";
         this.outDir = (cfg === null || cfg === void 0 ? void 0 : cfg.outDir) ? cfg.outDir : "./";
-        this.generatorModuleNames
-            = (cfg === null || cfg === void 0 ? void 0 : cfg.generatorModuleNames) ? cfg.generatorModuleNames : [];
+        this.generators = (cfg === null || cfg === void 0 ? void 0 : cfg.generators) ? cfg.generators : [];
     }
     return ConcreteSomsConfig;
 }());

@@ -60,24 +60,12 @@ const main = async () : Promise<void> => {
                 gen.generate(somsTrees).map((s: FileSource) => {
                     const filename = outDir + s.filename;
                     const dirName = filename.substring(0, filename.lastIndexOf("/"));
-                    console.log("dirName: " + dirName);
-                    console.log("filename: " + filename);
-                    // fs.mkdirSync(dirName, { recursive: true });
-                    // fs.writeFileSync(filename, s.source);
+                    fs.mkdirSync(dirName, { recursive: true });
+                    fs.writeFileSync(filename, s.source);
                 });
             });
         }
     );
 };
 
-
-// generators.map(g => g.generate(source))
-// new TsGenerator()
-// .generate(Somspiler.fromConfig(cfg).somspile())
-// .map(
-//     s => {
-//         const dirName = (cfg.outDir + "/" + s.filename).replace(new RegExp("/[^/]+$"), "");
-//         fs.mkdirSync(dirName, { recursive: true });
-//         fs.writeFileSync(cfg.outDir + "/" + s.filename, s.source);
-//     }
-// );
+main().then();
