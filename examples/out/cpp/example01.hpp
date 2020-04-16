@@ -6,7 +6,7 @@
 #include <KataCore/JsonSerializer.h>
 #include <json/reader.h>
 
-namespace Soms::example01 {
+namespace example01 {
     
 
 enum FooglarType {FooglarTypeNONE,ART,CAT,JEWEL};

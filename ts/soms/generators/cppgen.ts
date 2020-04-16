@@ -56,7 +56,7 @@ export class CppGenerator implements SomsGenerator {
             + this.stdIncludes
             + this.engineIncludes
             + "namespace "
-            + ["Soms", somsPackage.name].join(".").replace(/\./g, "::")
+            + somsPackage.name.replace(/\./g, "::")
             + " {\n";
 
         this.transpileEnums(somsPackage);
