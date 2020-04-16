@@ -29,10 +29,8 @@ import * as fs from "fs";
 import {
     ConcreteSomsConfig, SomsConfig, SomsGeneratorConfig, Somspiler
 } from "./somspiler";
-import {TsGenerator} from "./generators/tsgen";
 import {SomsPackage} from "./somstree";
 import {FileSource, SomsGenerator} from "./somsgenerator";
-import {CppGenerator} from "./generators/cppgen";
 
 const cfg = new ConcreteSomsConfig(
     <SomsConfig>JSON.parse(
