@@ -59,7 +59,7 @@ export class CppGenerator implements SomsGenerator {
             + somsPackage.name.replace(/\./g, "::")
             + " {\n";
 
-        this.transpileEnums(somsPackage);
+        this.transpilationBuffer += this.transpileEnums(somsPackage);
         this.transpileClasses(somsPackage);
         this.transpilationBuffer += "};\n";
 
@@ -74,21 +74,22 @@ export class CppGenerator implements SomsGenerator {
         return " ".repeat(width) + str;
     }
 
-    private transpileEnums(somsPackage : SomsPackage) : void {
-        for (let somsEnum of somsPackage.enums) {
-            this.UDTs.set(somsEnum.name, "enum");
+    private transpileEnums(somsPackage : SomsPackage) : string {
+        return somsPackage.enums.map(
+            somsEnum =>
+            {
+                // TODO: move this side-effect up
+                this.UDTs.set(somsEnum.name, "enum");
 
-            let indexedStringArray : string = this.padString(`\nstatic std::string ${somsEnum.name}StrArray[] = {"",`, this.TAB);
-            this.transpilationBuffer += this.padString(`\n\nenum ${somsEnum.name} {${somsEnum.name}NONE,`, this.TAB);
-
-            for (let i = 0; i < somsEnum.values.length; i++) {
-                this.transpilationBuffer += (i + 1 >= somsEnum.values.length) ? `${somsEnum.values[i]}};\n` : `${somsEnum.values[i]},`;
-                indexedStringArray       += (i + 1 >= somsEnum.values.length) ? `"${somsEnum.values[i]}"};\n` : `"${somsEnum.values[i]}",`;
+                return this.padString(`enum ${somsEnum.name} {${somsEnum.name}NONE,`, this.TAB)
+                    + somsEnum.values.map(v => `${somsEnum.name}_${v}`).join(",")
+                    + "};\n\n"
+                    //this string array will be placed in class definitions where the relevant enum type is referenced
+                    + this.padString(`static std::string ${somsEnum.name}StrArray[] = {"",`, this.TAB)
+                    + somsEnum.values.map(v => `"${v}"`).join(",") + "};\n"
+                    ;
             }
-
-            //this string array will be placed in class definitions where the relevant enum type is referenced
-            this.transpilationBuffer += indexedStringArray;
-        }
+        ).join("\n\n");
     }
 
     private resolveDimensionality(resolvedType : string, dimensionality : number) : string {

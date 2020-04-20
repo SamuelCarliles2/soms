@@ -7,11 +7,9 @@
 #include <json/reader.h>
 
 namespace example01 {
-    
+    enum FooglarType {FooglarTypeNONE,FooglarType_ART,FooglarType_CAT,FooglarType_JEWEL};
 
-enum FooglarType {FooglarTypeNONE,ART,CAT,JEWEL};
-    
-static std::string FooglarTypeStrArray[] = {"","ART","CAT","JEWEL"};
+    static std::string FooglarTypeStrArray[] = {"","ART","CAT","JEWEL"};
     class Fooglar {
     public:
         const std::string getMESSAGE_SCHEMA_VERSION() const {
