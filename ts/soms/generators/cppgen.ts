@@ -42,7 +42,7 @@ export class CppGenerator implements SomsGenerator {
 
     private readonly headerGuard    : string = "#pragma once\n";
     private readonly stdIncludes    : string = "#include <string>\n#include <vector>\n#include <algorithm>\n#include <iterator>\n";
-    private readonly engineIncludes : string = "#include <KataCore/JsonSerializer.h>\n#include <json/reader.h>\n\n";
+    private readonly engineIncludes : string = "#include <JsonSerializer.h>\n#include <json/reader.h>\n\n";
 
     private readonly TAB            : number = 4;
 
