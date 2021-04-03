@@ -36,7 +36,7 @@ var CppGenerator = /** @class */ (function () {
         this.fileName = "";
         this.headerGuard = "#pragma once\n";
         this.stdIncludes = "#include <string>\n#include <vector>\n#include <algorithm>\n#include <iterator>\n";
-        this.engineIncludes = "#include <KataCore/JsonSerializer.h>\n#include <json/reader.h>\n\n";
+        this.engineIncludes = "#include <JsonSerializer.h>\n#include <json/reader.h>\n\n";
         this.TAB = 4;
     }
     CppGenerator.prototype.generate = function (somspackages) {

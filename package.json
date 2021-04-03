@@ -1,6 +1,6 @@
 {
   "name": "soms",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Simple, Opinionated Message Schema",
   "bin": {
     "soms": "dist/soms/index.js"
