@@ -36,7 +36,7 @@ var CppGenerator = /** @class */ (function () {
         this.fileName = "";
         this.headerGuard = "#pragma once\n";
         this.stdIncludes = "#include <string>\n#include <vector>\n#include <algorithm>\n#include <iterator>\n";
-        this.engineIncludes = "#include <KataCore/JsonSerializer.h>\n#include <json/reader.h>\n\n";
+        this.engineIncludes = "#include <JsonSerializer.h>\n#include <json/reader.h>\n\n";
         this.TAB = 4;
     }
     CppGenerator.prototype.generate = function (somspackages) {
@@ -49,9 +49,9 @@ var CppGenerator = /** @class */ (function () {
                 + this.stdIncludes
                 + this.engineIncludes
                 + "namespace "
-                + ["Soms", somsPackage.name].join(".").replace(/\./g, "::")
+                + somsPackage.name.replace(/\./g, "::")
                 + " {\n";
-        this.transpileEnums(somsPackage);
+        this.transpilationBuffer += this.transpileEnums(somsPackage);
         this.transpileClasses(somsPackage);
         this.transpilationBuffer += "};\n";
         return {
@@ -64,18 +64,17 @@ var CppGenerator = /** @class */ (function () {
         return " ".repeat(width) + str;
     };
     CppGenerator.prototype.transpileEnums = function (somsPackage) {
-        for (var _i = 0, _a = somsPackage.enums; _i < _a.length; _i++) {
-            var somsEnum = _a[_i];
-            this.UDTs.set(somsEnum.name, "enum");
-            var indexedStringArray = this.padString("\nstatic std::string " + somsEnum.name + "StrArray[] = {\"\",", this.TAB);
-            this.transpilationBuffer += this.padString("\n\nenum " + somsEnum.name + " {" + somsEnum.name + "NONE,", this.TAB);
-            for (var i = 0; i < somsEnum.values.length; i++) {
-                this.transpilationBuffer += (i + 1 >= somsEnum.values.length) ? somsEnum.values[i] + "};\n" : somsEnum.values[i] + ",";
-                indexedStringArray += (i + 1 >= somsEnum.values.length) ? "\"" + somsEnum.values[i] + "\"};\n" : "\"" + somsEnum.values[i] + "\",";
-            }
-            //this string array will be placed in class definitions where the relevant enum type is referenced
-            this.transpilationBuffer += indexedStringArray;
-        }
+        var _this = this;
+        return somsPackage.enums.map(function (somsEnum) {
+            // TODO: move this side-effect up
+            _this.UDTs.set(somsEnum.name, "enum");
+            return _this.padString("enum " + somsEnum.name + " {" + somsEnum.name + "NONE,", _this.TAB)
+                + somsEnum.values.map(function (v) { return somsEnum.name + "_" + v; }).join(",")
+                + "};\n\n"
+                //this string array will be placed in class definitions where the relevant enum type is referenced
+                + _this.padString("static std::string " + somsEnum.name + "StrArray[] = {\"\",", _this.TAB)
+                + somsEnum.values.map(function (v) { return "\"" + v + "\""; }).join(",") + "};\n";
+        }).join("\n\n");
     };
     CppGenerator.prototype.resolveDimensionality = function (resolvedType, dimensionality) {
         var resolvedTypeDimensionality = "";

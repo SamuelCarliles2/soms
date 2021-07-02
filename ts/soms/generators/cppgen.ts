@@ -56,10 +56,10 @@ export class CppGenerator implements SomsGenerator {
             + this.stdIncludes
             + this.engineIncludes
             + "namespace "
-            + ["Soms", somsPackage.name].join(".").replace(/\./g, "::")
+            + somsPackage.name.replace(/\./g, "::")
             + " {\n";
 
-        this.transpileEnums(somsPackage);
+        this.transpilationBuffer += this.transpileEnums(somsPackage);
         this.transpileClasses(somsPackage);
         this.transpilationBuffer += "};\n";
 
@@ -85,10 +85,7 @@ export class CppGenerator implements SomsGenerator {
                 this.transpilationBuffer += (i + 1 >= somsEnum.values.length) ? `${somsEnum.name}_${somsEnum.values[i]}};\n` : `${somsEnum.name}_${somsEnum.values[i]},`;
                 indexedStringArray       += (i + 1 >= somsEnum.values.length) ? `"${somsEnum.name}_${somsEnum.values[i]}"};\n` : `"${somsEnum.name}_${somsEnum.values[i]}",`;
             }
-
-            //this string array will be placed in class definitions where the relevant enum type is referenced
-            this.transpilationBuffer += indexedStringArray;
-        }
+        ).join("\n\n");
     }
 
     private resolveDimensionality(resolvedType : string, dimensionality : number) : string {
