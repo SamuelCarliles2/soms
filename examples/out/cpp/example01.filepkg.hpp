@@ -3,7 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include <iterator>
-#include <KataCore/JsonSerializer.h>
+#include <JsonSerializer.h>
 #include <json/reader.h>
 
 namespace example01::filepkg {
