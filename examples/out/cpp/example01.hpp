@@ -149,9 +149,9 @@ namespace example01 {
             if (this->bToJson) {
                 unsigned int FooglarTypeenumIndex = 0;
                 unsigned int FooglarTypelength = sizeof(FooglarTypeStrArray) / sizeof(std::string);
-                for (int i = 0; i < FooglarTypelength; i++) {
-                    if (FooglarTypeStrArray[i].find(FooglarTypeStrArray[DEFAULT_FOOGLAR_TYPE.DEFAULT_FOOGLAR_TYPE], 0) != std::string::npos) {
-                        FooglarTypeenumIndex = i;
+                for (int j = 0; j < FooglarTypelength; j++) {
+                    if (FooglarTypeStrArray[j].find(FooglarTypeStrArray[DEFAULT_FOOGLAR_TYPE.DEFAULT_FOOGLAR_TYPE], 0) != std::string::npos) {
+                        FooglarTypeenumIndex = j;
                         break;
                     }
                 }
@@ -162,9 +162,9 @@ namespace example01 {
                 s.Serialize("DEFAULT_FOOGLAR_TYPE", enumValue);
                 unsigned int FooglarTypeenumIndex = 0;
                 unsigned int FooglarTypelength = sizeof(FooglarTypeStrArray) / sizeof(std::string);
-                for (int i = 0; i < FooglarTypelength; i++) {
-                    if (FooglarTypeStrArray[i].find(enumValue, 0) != std::string::npos) {
-                        FooglarTypeenumIndex = i;
+                for (int j = 0; j < FooglarTypelength; j++) {
+                    if (FooglarTypeStrArray[j].find(enumValue, 0) != std::string::npos) {
+                        FooglarTypeenumIndex = j;
                         break;
                     }
                 }
@@ -177,9 +177,9 @@ namespace example01 {
             if (this->bToJson) {
                 unsigned int FooglarTypeenumIndex = 0;
                 unsigned int FooglarTypelength = sizeof(FooglarTypeStrArray) / sizeof(std::string);
-                for (int i = 0; i < FooglarTypelength; i++) {
-                    if (FooglarTypeStrArray[i].find(FooglarTypeStrArray[fooglarType.fooglarType], 0) != std::string::npos) {
-                        FooglarTypeenumIndex = i;
+                for (int j = 0; j < FooglarTypelength; j++) {
+                    if (FooglarTypeStrArray[j].find(FooglarTypeStrArray[fooglarType.fooglarType], 0) != std::string::npos) {
+                        FooglarTypeenumIndex = j;
                         break;
                     }
                 }
@@ -190,9 +190,9 @@ namespace example01 {
                 s.Serialize("fooglarType", enumValue);
                 unsigned int FooglarTypeenumIndex = 0;
                 unsigned int FooglarTypelength = sizeof(FooglarTypeStrArray) / sizeof(std::string);
-                for (int i = 0; i < FooglarTypelength; i++) {
-                    if (FooglarTypeStrArray[i].find(enumValue, 0) != std::string::npos) {
-                        FooglarTypeenumIndex = i;
+                for (int j = 0; j < FooglarTypelength; j++) {
+                    if (FooglarTypeStrArray[j].find(enumValue, 0) != std::string::npos) {
+                        FooglarTypeenumIndex = j;
                         break;
                     }
                 }
