@@ -66,4 +66,4 @@ const main = async () : Promise<void> => {
     );
 };
 
-main().then();
+main().then().catch(e => { console.error(e); });

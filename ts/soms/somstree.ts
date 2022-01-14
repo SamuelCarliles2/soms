@@ -22,6 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+import {SomsPackagePath} from "./somsgenerator";
+
 export enum SomsNodeType {
     SOMSENUM = "SOMSENUM",
     SOMSFIELD = "SOMSFIELD",
@@ -85,17 +87,30 @@ export class SomsClass implements SomsTreeNode {
     }
 }
 
+export type SomsPackageAliasName = string;
+// export type SomsPackageName = string;
+
+export type SomsPackageMemberAliasName = string;
+export type SomsPackageMemberName = string;
+export type SomsPackageMemberAddress = {packagePath: SomsPackagePath, packageMemberName: SomsPackageMemberName};
+
 export class SomsPackage implements SomsTreeNode {
     readonly somsNodeType = SomsNodeType.SOMSPACKAGE;
 
+    readonly path: string[];
     readonly name: string;
     readonly enums: SomsEnum[];
     readonly classes: SomsClass[];
+    readonly packageImportAliases: Record<SomsPackageAliasName, SomsPackagePath>;
+    readonly packageMemberImportAliases: Record<SomsPackageMemberAliasName, SomsPackageMemberAddress>;
 
     constructor(p: SomsPackageLite) {
-        this.name = p.name;
+        this.path = p.path;
+        this.name = p.name ? p.name : this.path.join(".");
         this.enums = p.enums ? p.enums : [];
         this.classes = p.classes ? p.classes : [];
+        this.packageImportAliases = p.packageImportAliases ? p.packageImportAliases : {};
+        this.packageMemberImportAliases = p.packageMemberImportAliases ? p.packageMemberImportAliases : {};
     }
 }
 
@@ -120,9 +135,12 @@ export interface SomsClassLite {
 }
 
 export interface SomsPackageLite {
-    readonly name: string;
+    readonly path: string[];
+    readonly name?: string;
     readonly enums?: SomsEnum[];
     readonly classes?: SomsClass[];
+    readonly packageImportAliases?: Record<SomsPackageAliasName, SomsPackagePath>;
+    readonly packageMemberImportAliases?: Record<SomsPackageMemberAliasName, SomsPackageMemberAddress>;
 }
 
 

@@ -36,9 +36,11 @@ export interface Source {
     readonly source: string;
 }
 
+export type SomsPackagePath = string[];
+
 export interface PackageSource extends Source {
     readonly source: string;
-    readonly packageName: string;
+    readonly packagePath: SomsPackagePath;
 }
 
 export interface FileSource extends Source {

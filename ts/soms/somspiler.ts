@@ -23,20 +23,36 @@ SOFTWARE.
 */
 
 import * as fs from "fs";
+import {posix as path} from "path";
+
 import * as ts from "@typescript-eslint/parser";
 import {AST_NODE_TYPES, TSESTree} from "@typescript-eslint/typescript-estree";
+import {ImportSpecifier} from "@typescript-eslint/typescript-estree/dist/ts-estree/ts-estree";
 
 import {
     isSomsPrimitiveType,
-    SomsTypeIdentifier, SomsPrimitiveType,
-    SomsInt64TypeIdentifier, SomsDoubleTypeIdentifier,
-    SomsBooleanTypeIdentifier, SomsStringTypeIdentifier,
-    SomsUserDefinedTypeIdentifier, SomsEnumTypeIdentifier, SomsClassTypeIdentifier,
-    SomsNodeType, SomsEnum, SomsClass, SomsField, SomsPackage,
-    SomsFieldLite, SomsValue
+    SomsBooleanTypeIdentifier,
+    SomsClass,
+    SomsClassTypeIdentifier,
+    SomsDoubleTypeIdentifier,
+    SomsEnum,
+    SomsEnumTypeIdentifier,
+    SomsField,
+    SomsFieldLite,
+    SomsInt64TypeIdentifier,
+    SomsNodeType,
+    SomsPackage,
+    SomsPackageAliasName,
+    SomsPackageMemberAddress,
+    SomsPackageMemberAliasName,
+    SomsPrimitiveType,
+    SomsStringTypeIdentifier,
+    SomsTypeIdentifier,
+    SomsUserDefinedTypeIdentifier,
+    SomsValue
 } from "./somstree";
 
-import {FileSource, PackageSource} from "./somsgenerator";
+import {FileSource, PackageSource, SomsPackagePath} from "./somsgenerator";
 
 
 export interface SomsGeneratorConfig {
@@ -54,31 +70,60 @@ export interface SomsConfig {
 export class Somspiler {
     constructor(readonly sources: PackageSource[]) {}
 
+    static resolveImportPackage(s: string, packagePath: SomsPackagePath) : SomsPackagePath
+    {
+        // s is in either absolute or relative path form, possibly ending in "index[.soms]".
+        // resolve internal relative paths, so any remaining relative pathing is at the beginning
+        const n = path.normalize(s);
+
+        // now if s is an absolute path, great, otherwise it's relative,
+        // in which case let's coerce it to being absolute using my package path,
+        // which is assumed to be absolute
+        const p = path.parse(n);
+        const pp = p.root === "/"
+            ? path.normalize(`${p.dir}/${p.name}`)
+            : path.normalize(`/${packagePath.join("/")}/${p.dir}/${p.name}`);
+
+        // now if the absolute path ends in "index[.soms]",
+        // trim that off so we're just left with a package path.
+        // the slice is just because since we're now known to be an absolute path,
+        // the first element will always be empty string
+        const ppp = path.parse(pp);
+        return ppp.name === "index"
+            ? ppp.dir.split("/").slice(1)
+            : path.normalize(`${ppp.dir}/${ppp.name}`).split("/").slice(1);
+    }
+
     static toPackageSource(s: FileSource, cfg: ConcreteSomsConfig)
         : PackageSource
     {
         return {
             source: s.source,
-            packageName:
-                s.filename
-                .replace(new RegExp(cfg.packageRoot + "/*"), "")
-                .replace(new RegExp("\\.soms$"), "")
-                .replace(new RegExp("/*index$"), "")
-                .replace(new RegExp("/+", "g"), ".")
+            packagePath: Somspiler.resolveImportPackage(
+                s.filename.replace(new RegExp(`${cfg.packageRoot}/*`), ""),
+                []
+            )
         };
     }
 
     public somspile() : SomsPackage[] {
         return this.sources.map(
-            s => Somspiler.handleProgram(ts.parse(s.source), s.packageName)
+            s => {
+                return Somspiler.handleProgram(
+                    ts.parse(s.source, {ecmaVersion: 6, sourceType: "module"}),
+                    s
+                );
+            }
         );
     }
 
-    static handleProgram(p: TSESTree.Program, packageName: string)
+    static handleProgram(p: TSESTree.Program, packageSource: PackageSource)
         : SomsPackage
     {
         let enums : SomsEnum[] = [];
         let classes: SomsClass[] = [];
+        let packageImportAliases: Record<SomsPackageAliasName, SomsPackagePath> = {};
+        let packageMemberImportAliases: Record<SomsPackageMemberAliasName, SomsPackageMemberAddress> = {};
 
         for(let s of p.body) {
             // s will be a TSESTree.Statement
@@ -106,6 +151,25 @@ export class Somspiler {
                     );
                 }
             }
+            else if(s.type === AST_NODE_TYPES.ImportDeclaration) {
+                const [pi, pmi] = Somspiler.handleImportDeclaration(s, packageSource);
+
+                let pi2 = Somspiler.mergeRecords(packageImportAliases, pi);
+                if(pi2 === undefined) {
+                    throw new Error(`Duplicate package aliases in ${JSON.stringify(packageSource.packagePath)}.`);
+                }
+
+                let pmi2 = Somspiler.mergeRecords(packageMemberImportAliases, pmi);
+                if(pmi2 === undefined) {
+                    throw new Error(`Duplicate package member aliases in ${JSON.stringify(packageSource.packagePath)}.`);
+                }
+
+                packageImportAliases = pi2;
+                packageMemberImportAliases = pmi2;
+
+                console.log(`pi: ${JSON.stringify(packageImportAliases)}`);
+                console.log(`pmi: ${JSON.stringify(packageMemberImportAliases)}`);
+            }
             else {
                 throw new Error(
                     "Don't know what to do with statement " + toJson(s)
@@ -116,9 +180,12 @@ export class Somspiler {
         return Somspiler.resolveUdts(
             new SomsPackage(
                 {
-                    name: packageName,
+                    path: packageSource.packagePath,
+                    // intellisense going nuts here
                     enums: enums,
-                    classes: classes
+                    classes: classes,
+                    packageImportAliases: packageImportAliases,
+                    packageMemberImportAliases: packageMemberImportAliases
                 }
             )
         );
@@ -206,11 +273,74 @@ export class Somspiler {
 
         return new SomsPackage(
             {
-                name: p.name,
+                path: p.path,
                 enums: p.enums,
-                classes: classes
+                classes: classes,
+                packageImportAliases: p.packageImportAliases,
+                packageMemberImportAliases: p.packageMemberImportAliases
             }
         );
+    }
+
+    static mergeRecords<T>(r1: Record<string, T>, r2: Record<string, T>) : Record<string, T> | undefined {
+        const keys = Object.keys(r1).concat(Object.keys(r2));
+        if(keys.length !== (new Set(keys)).size) {
+            return undefined;
+        }
+
+        let result: Record<string, T> = {};
+        Object.keys(r1).forEach(k => result[k] = r1[k]);
+        Object.keys(r2).forEach(k => result[k] = r2[k]);
+
+        return result;
+    }
+
+    static handleImportDeclaration(d: TSESTree.ImportDeclaration, packageSource: PackageSource) : [
+        Record<SomsPackageAliasName, SomsPackagePath>,
+        Record<SomsPackageMemberAliasName, SomsPackageMemberAddress>
+    ]
+    {
+        // resolve any relative pathing
+        // /example01/index.soms
+        // /example01/foo/index.soms
+        const packagePath = Somspiler.resolveImportPackage(<string>d.source.value, packageSource.packagePath);
+        const packageName = packagePath.join(".");
+        let packageImportAliases: Record<SomsPackageAliasName, SomsPackagePath> = {};
+        let packageMemberImportAliases: Record<SomsPackageMemberAliasName, SomsPackageMemberAddress> = {};
+
+        const piEntries: [SomsPackageAliasName, SomsPackagePath][] = d.specifiers
+            .filter(s => s.type === AST_NODE_TYPES.ImportNamespaceSpecifier)
+            .map(s => [s.local.name, packagePath]);
+
+        if(piEntries.length > 1) {
+            throw new Error(
+                `Package ${packageName} is imported twice, as ${JSON.stringify(piEntries.map(e => e[0]))}. `
+                + "Please import packages once."
+            );
+        }
+
+        piEntries.forEach(e => packageImportAliases[e[0]] = e[1]);
+
+        const pmiEntries: [SomsPackageAliasName, SomsPackageMemberAddress][] = d.specifiers
+            .filter(s => s.type === AST_NODE_TYPES.ImportSpecifier)
+            .map(s => <ImportSpecifier>s) // need to spoonfeed intellisense here
+            .map(s => [
+                s.local.name,
+                {
+                    packagePath: packagePath,
+                    packageMemberName: s.imported.name
+                }
+            ]);
+
+        if(pmiEntries.length != (new Set(pmiEntries.map(e => e[0])).size)) {
+            throw new Error(
+                `Duplicate import identifier in ${JSON.stringify(pmiEntries.map(e => e[0]))}.`
+            );
+        }
+
+        pmiEntries.forEach(e => packageMemberImportAliases[e[0]] = e[1]);
+
+        return [packageImportAliases, packageMemberImportAliases];
     }
 
     static handleExportDeclaration(d: TSESTree.ExportDeclaration)

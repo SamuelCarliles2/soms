@@ -94,5 +94,5 @@ var main = function () { return __awaiter(void 0, void 0, void 0, function () {
         return [2 /*return*/];
     });
 }); };
-main().then();
+main().then().catch(function (e) { console.error(e); });
 //# sourceMappingURL=index.js.map

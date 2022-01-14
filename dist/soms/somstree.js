@@ -81,9 +81,12 @@ exports.SomsClass = SomsClass;
 var SomsPackage = /** @class */ (function () {
     function SomsPackage(p) {
         this.somsNodeType = SomsNodeType.SOMSPACKAGE;
-        this.name = p.name;
+        this.path = p.path;
+        this.name = p.name ? p.name : this.path.join(".");
         this.enums = p.enums ? p.enums : [];
         this.classes = p.classes ? p.classes : [];
+        this.packageImportAliases = p.packageImportAliases ? p.packageImportAliases : {};
+        this.packageMemberImportAliases = p.packageMemberImportAliases ? p.packageMemberImportAliases : {};
     }
     return SomsPackage;
 }());

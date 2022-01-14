@@ -24,6 +24,7 @@ SOFTWARE.
 */
 Object.defineProperty(exports, "__esModule", { value: true });
 var fs = require("fs");
+var path_1 = require("path");
 var ts = require("@typescript-eslint/parser");
 var typescript_estree_1 = require("@typescript-eslint/typescript-estree");
 var somstree_1 = require("./somstree");
@@ -31,22 +32,42 @@ var Somspiler = /** @class */ (function () {
     function Somspiler(sources) {
         this.sources = sources;
     }
+    Somspiler.resolveImportPackage = function (s, packagePath) {
+        // s is in either absolute or relative path form, possibly ending in "index[.soms]".
+        // resolve internal relative paths, so any remaining relative pathing is at the beginning
+        var n = path_1.posix.normalize(s);
+        // now if s is an absolute path, great, otherwise it's relative,
+        // in which case let's coerce it to being absolute using my package path,
+        // which is assumed to be absolute
+        var p = path_1.posix.parse(n);
+        var pp = p.root === "/"
+            ? path_1.posix.normalize(p.dir + "/" + p.name)
+            : path_1.posix.normalize("/" + packagePath.join("/") + "/" + p.dir + "/" + p.name);
+        // now if the absolute path ends in "index[.soms]",
+        // trim that off so we're just left with a package path.
+        // the slice is just because since we're now known to be an absolute path,
+        // the first element will always be empty string
+        var ppp = path_1.posix.parse(pp);
+        return ppp.name === "index"
+            ? ppp.dir.split("/").slice(1)
+            : path_1.posix.normalize(ppp.dir + "/" + ppp.name).split("/").slice(1);
+    };
     Somspiler.toPackageSource = function (s, cfg) {
         return {
             source: s.source,
-            packageName: s.filename
-                .replace(new RegExp(cfg.packageRoot + "/*"), "")
-                .replace(new RegExp("\\.soms$"), "")
-                .replace(new RegExp("/*index$"), "")
-                .replace(new RegExp("/+", "g"), ".")
+            packagePath: Somspiler.resolveImportPackage(s.filename.replace(new RegExp(cfg.packageRoot + "/*"), ""), [])
         };
     };
     Somspiler.prototype.somspile = function () {
-        return this.sources.map(function (s) { return Somspiler.handleProgram(ts.parse(s.source), s.packageName); });
+        return this.sources.map(function (s) {
+            return Somspiler.handleProgram(ts.parse(s.source, { ecmaVersion: 6, sourceType: "module" }), s);
+        });
     };
-    Somspiler.handleProgram = function (p, packageName) {
+    Somspiler.handleProgram = function (p, packageSource) {
         var enums = [];
         var classes = [];
+        var packageImportAliases = {};
+        var packageMemberImportAliases = {};
         for (var _i = 0, _a = p.body; _i < _a.length; _i++) {
             var s = _a[_i];
             // s will be a TSESTree.Statement
@@ -69,14 +90,32 @@ var Somspiler = /** @class */ (function () {
                         + "in statement " + toJson(s));
                 }
             }
+            else if (s.type === typescript_estree_1.AST_NODE_TYPES.ImportDeclaration) {
+                var _b = Somspiler.handleImportDeclaration(s, packageSource), pi = _b[0], pmi = _b[1];
+                var pi2 = Somspiler.mergeRecords(packageImportAliases, pi);
+                if (pi2 === undefined) {
+                    throw new Error("Duplicate package aliases in " + JSON.stringify(packageSource.packagePath) + ".");
+                }
+                var pmi2 = Somspiler.mergeRecords(packageMemberImportAliases, pmi);
+                if (pmi2 === undefined) {
+                    throw new Error("Duplicate package member aliases in " + JSON.stringify(packageSource.packagePath) + ".");
+                }
+                packageImportAliases = pi2;
+                packageMemberImportAliases = pmi2;
+                console.log("pi: " + JSON.stringify(packageImportAliases));
+                console.log("pmi: " + JSON.stringify(packageMemberImportAliases));
+            }
             else {
                 throw new Error("Don't know what to do with statement " + toJson(s));
             }
         }
         return Somspiler.resolveUdts(new somstree_1.SomsPackage({
-            name: packageName,
+            path: packageSource.packagePath,
+            // intellisense going nuts here
             enums: enums,
-            classes: classes
+            classes: classes,
+            packageImportAliases: packageImportAliases,
+            packageMemberImportAliases: packageMemberImportAliases
         }));
     };
     Somspiler.checkUnique = function (enumNames, classNames) {
@@ -139,10 +178,54 @@ var Somspiler = /** @class */ (function () {
             })
         }); });
         return new somstree_1.SomsPackage({
-            name: p.name,
+            path: p.path,
             enums: p.enums,
-            classes: classes
+            classes: classes,
+            packageImportAliases: p.packageImportAliases,
+            packageMemberImportAliases: p.packageMemberImportAliases
         });
+    };
+    Somspiler.mergeRecords = function (r1, r2) {
+        var keys = Object.keys(r1).concat(Object.keys(r2));
+        if (keys.length !== (new Set(keys)).size) {
+            return undefined;
+        }
+        var result = {};
+        Object.keys(r1).forEach(function (k) { return result[k] = r1[k]; });
+        Object.keys(r2).forEach(function (k) { return result[k] = r2[k]; });
+        return result;
+    };
+    Somspiler.handleImportDeclaration = function (d, packageSource) {
+        // resolve any relative pathing
+        // /example01/index.soms
+        // /example01/foo/index.soms
+        var packagePath = Somspiler.resolveImportPackage(d.source.value, packageSource.packagePath);
+        var packageName = packagePath.join(".");
+        var packageImportAliases = {};
+        var packageMemberImportAliases = {};
+        var piEntries = d.specifiers
+            .filter(function (s) { return s.type === typescript_estree_1.AST_NODE_TYPES.ImportNamespaceSpecifier; })
+            .map(function (s) { return [s.local.name, packagePath]; });
+        if (piEntries.length > 1) {
+            throw new Error("Package " + packageName + " is imported twice, as " + JSON.stringify(piEntries.map(function (e) { return e[0]; })) + ". "
+                + "Please import packages once.");
+        }
+        piEntries.forEach(function (e) { return packageImportAliases[e[0]] = e[1]; });
+        var pmiEntries = d.specifiers
+            .filter(function (s) { return s.type === typescript_estree_1.AST_NODE_TYPES.ImportSpecifier; })
+            .map(function (s) { return s; }) // need to spoonfeed intellisense here
+            .map(function (s) { return [
+            s.local.name,
+            {
+                packagePath: packagePath,
+                packageMemberName: s.imported.name
+            }
+        ]; });
+        if (pmiEntries.length != (new Set(pmiEntries.map(function (e) { return e[0]; })).size)) {
+            throw new Error("Duplicate import identifier in " + JSON.stringify(pmiEntries.map(function (e) { return e[0]; })) + ".");
+        }
+        pmiEntries.forEach(function (e) { return packageMemberImportAliases[e[0]] = e[1]; });
+        return [packageImportAliases, packageMemberImportAliases];
     };
     Somspiler.handleExportDeclaration = function (d) {
         var result;
