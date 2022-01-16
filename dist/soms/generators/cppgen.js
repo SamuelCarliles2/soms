@@ -23,6 +23,25 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 Object.defineProperty(exports, "__esModule", { value: true });
+var padString = function (str, width) { return " ".repeat(width) + str; };
+var resolveDimensionality = function (resolvedType, dimensionality) {
+    var resolvedTypeDimensionality = "";
+    switch (dimensionality) {
+        case 0:
+            resolvedTypeDimensionality = "" + resolvedType;
+            break;
+        case 1:
+            resolvedTypeDimensionality = "std::vector<" + resolvedType + ">";
+            break;
+        case 2:
+            resolvedTypeDimensionality = "std::vector<std::vector<" + resolvedType + ">>";
+            break;
+        case 3:
+            resolvedTypeDimensionality = "std::vector<std::vector<std::vector<" + resolvedType + ">>>";
+            break;
+    }
+    return resolvedTypeDimensionality;
+};
 var CppGenerator = /** @class */ (function () {
     function CppGenerator() {
         this.primitiveMap = new Map([
@@ -59,69 +78,47 @@ var CppGenerator = /** @class */ (function () {
             filename: somsPackage.name + ".hpp"
         };
     };
-    CppGenerator.prototype.padString = function (str, width) {
-        // return str.padStart(str.length+width);
-        return " ".repeat(width) + str;
-    };
     CppGenerator.prototype.transpileEnums = function (somsPackage) {
         var _this = this;
         return somsPackage.enums.map(function (somsEnum) {
             // TODO: move this side-effect up
             _this.UDTs.set(somsEnum.name, "enum");
-            return _this.padString("enum " + somsEnum.name + " {" + somsEnum.name + "NONE,", _this.TAB)
+            return padString("enum " + somsEnum.name + " {" + somsEnum.name + "NONE,", _this.TAB)
                 + somsEnum.values.map(function (v) { return somsEnum.name + "_" + v; }).join(",")
                 + "};\n\n"
                 //this string array will be placed in class definitions where the relevant enum type is referenced
-                + _this.padString("static std::string " + somsEnum.name + "StrArray[] = {\"\",", _this.TAB)
+                + padString("static std::string " + somsEnum.name + "StrArray[] = {\"\",", _this.TAB)
                 + somsEnum.values.map(function (v) { return "\"" + v + "\""; }).join(",") + "};\n";
         }).join("\n\n");
-    };
-    CppGenerator.prototype.resolveDimensionality = function (resolvedType, dimensionality) {
-        var resolvedTypeDimensionality = "";
-        switch (dimensionality) {
-            case 0:
-                resolvedTypeDimensionality = "" + resolvedType;
-                break;
-            case 1:
-                resolvedTypeDimensionality = "std::vector<" + resolvedType + ">";
-                break;
-            case 2:
-                resolvedTypeDimensionality = "std::vector<std::vector<" + resolvedType + ">>";
-                break;
-            case 3:
-                resolvedTypeDimensionality = "std::vector<std::vector<std::vector<" + resolvedType + ">>>";
-                break;
-        }
-        return resolvedTypeDimensionality;
     };
     CppGenerator.prototype.transpileClasses = function (somsPackage) {
         for (var _i = 0, _a = somsPackage.classes; _i < _a.length; _i++) {
             var somsClass = _a[_i];
             this.UDTs.set(somsClass.name, "class");
-            this.transpilationBuffer += this.padString("class " + somsClass.name + " {\n    public:\n", this.TAB);
+            this.transpilationBuffer += padString("class " + somsClass.name + " {\n    public:\n", this.TAB);
             for (var _b = 0, _c = somsClass.fields; _b < _c.length; _b++) {
                 var somsField = _c[_b];
                 var resolvedType = this.resolveType(somsField.typeIdentifier.name);
                 //getters/setters
-                this.transpilationBuffer += this.padString("const " + this.resolveDimensionality(resolvedType, somsField.dimensionality) + " get" + somsField.name + "() const {\n", this.TAB * 2);
-                this.transpilationBuffer += this.padString("return this->" + somsField.name + "." + somsField.name + ";\n", this.TAB * 3);
-                this.transpilationBuffer += this.padString("};\n\n", this.TAB * 2);
+                this.transpilationBuffer += padString("const " + resolveDimensionality(resolvedType, somsField.dimensionality) + " get" + somsField.name + "() const {\n", this.TAB * 2);
+                this.transpilationBuffer += padString("return this->" + somsField.name + "." + somsField.name + ";\n", this.TAB * 3);
+                this.transpilationBuffer += padString("};\n\n", this.TAB * 2);
                 if (!somsField.staticConst) {
-                    this.transpilationBuffer += this.padString("void set" + somsField.name + "(" + this.resolveDimensionality(resolvedType, somsField.dimensionality) + " value) {\n", this.TAB * 2);
-                    this.transpilationBuffer += this.padString("this->" + somsField.name + "." + somsField.name + " = value;\n", this.TAB * 3);
-                    this.transpilationBuffer += this.padString("};\n", this.TAB * 2);
+                    this.transpilationBuffer += padString("void set" + somsField.name + "(" + resolveDimensionality(resolvedType, somsField.dimensionality) + " value) {\n", this.TAB * 2);
+                    this.transpilationBuffer += padString("this->" + somsField.name + "." + somsField.name + " = value;\n", this.TAB * 3);
+                    this.transpilationBuffer += padString("};\n", this.TAB * 2);
                 }
             }
-            this.transpilationBuffer += this.padString("private:\n", this.TAB);
+            this.transpilationBuffer += padString("private:\n", this.TAB);
             for (var _d = 0, _e = somsClass.fields; _d < _e.length; _d++) {
                 var somsField = _e[_d];
                 var resolvedType = this.resolveType(somsField.typeIdentifier.name);
                 var fieldDefinition = "";
-                this.transpilationBuffer += this.padString("struct Field" + somsField.name + " {\n", this.TAB * 2);
+                this.transpilationBuffer += padString("struct Field" + somsField.name + " {\n", this.TAB * 2);
                 if (somsField.staticConst) {
                     fieldDefinition += ""; //TO BE IMPLEMENTED, const causes encapsulating containers, i.e. vector operator= to be deleted. Maybe a copy constructor for field struct type?
                 }
-                fieldDefinition += this.resolveDimensionality(resolvedType, somsField.dimensionality) + " ";
+                fieldDefinition += resolveDimensionality(resolvedType, somsField.dimensionality) + " ";
                 if (somsField.name)
                     fieldDefinition += "" + somsField.name;
                 if (somsField.staticConst) {
@@ -137,113 +134,113 @@ var CppGenerator = /** @class */ (function () {
                     fieldDefinition += (somsField.dimensionality == 0) ? "= " + somsField.typeIdentifier.name + "(0)" : "= {}";
                 }
                 fieldDefinition += ";\n";
-                this.transpilationBuffer += this.padString(fieldDefinition, this.TAB * 3);
-                this.transpilationBuffer += this.padString("bool optional = " + somsField.optional + ";\n", this.TAB * 3);
-                this.transpilationBuffer += this.padString("} " + somsField.name + ";\n", this.TAB * 2);
+                this.transpilationBuffer += padString(fieldDefinition, this.TAB * 3);
+                this.transpilationBuffer += padString("bool optional = " + somsField.optional + ";\n", this.TAB * 3);
+                this.transpilationBuffer += padString("} " + somsField.name + ";\n", this.TAB * 2);
             }
-            this.transpilationBuffer += this.padString("bool bToJson = false;\n", this.TAB * 2);
-            this.transpilationBuffer += this.padString("public:\n", this.TAB);
+            this.transpilationBuffer += padString("bool bToJson = false;\n", this.TAB * 2);
+            this.transpilationBuffer += padString("public:\n", this.TAB);
             this.transpilationBuffer += this.buildClassSerdeMethods(somsClass.name, somsClass.name, somsClass.fields);
-            this.transpilationBuffer += this.padString("};\n\n", this.TAB);
+            this.transpilationBuffer += padString("};\n\n", this.TAB);
         }
     };
     CppGenerator.prototype.mapEnumValueToString = function (field, fieldIdentifier, tabSize, arrName, index) {
         var serializeMethod = "";
-        serializeMethod += this.padString("unsigned int " + fieldIdentifier + "enumIndex = 0;\n", tabSize);
-        serializeMethod += this.padString("unsigned int " + fieldIdentifier + "length = sizeof(" + fieldIdentifier + "StrArray) / sizeof(std::string);\n", tabSize);
-        serializeMethod += this.padString("for (int j = 0; j < " + fieldIdentifier + "length; j++) {\n", tabSize);
-        serializeMethod += this.padString("if (" + arrName + "[j].find(" + index + ", 0) != std::string::npos) {\n", tabSize + this.TAB);
-        serializeMethod += this.padString(fieldIdentifier + "enumIndex = j;\n", tabSize + this.TAB * 2);
-        serializeMethod += this.padString("break;\n", tabSize + this.TAB * 2);
-        serializeMethod += this.padString("}\n", tabSize + this.TAB);
-        serializeMethod += this.padString("}\n", tabSize);
+        serializeMethod += padString("unsigned int " + fieldIdentifier + "enumIndex = 0;\n", tabSize);
+        serializeMethod += padString("unsigned int " + fieldIdentifier + "length = sizeof(" + fieldIdentifier + "StrArray) / sizeof(std::string);\n", tabSize);
+        serializeMethod += padString("for (int j = 0; j < " + fieldIdentifier + "length; j++) {\n", tabSize);
+        serializeMethod += padString("if (" + arrName + "[j].find(" + index + ", 0) != std::string::npos) {\n", tabSize + this.TAB);
+        serializeMethod += padString(fieldIdentifier + "enumIndex = j;\n", tabSize + this.TAB * 2);
+        serializeMethod += padString("break;\n", tabSize + this.TAB * 2);
+        serializeMethod += padString("}\n", tabSize + this.TAB);
+        serializeMethod += padString("}\n", tabSize);
         return serializeMethod;
     };
     CppGenerator.prototype.buildClassSerdeMethods = function (name, type, fields) {
         var _this = this;
-        var serializeMethod = this.padString("void Serialize(JsonSerializer& s) {\n", this.TAB * 2);
+        var serializeMethod = padString("void Serialize(JsonSerializer& s) {\n", this.TAB * 2);
         fields.forEach(function (field) {
             var fieldIdentifier = field.typeIdentifier.name;
             if (_this.primitiveMap.has(fieldIdentifier) || (_this.UDTs.has(fieldIdentifier) && _this.UDTs.get(fieldIdentifier) != "enum")) {
-                serializeMethod += _this.padString("s.Serialize(\"" + field.name + "\", " + field.name + "." + field.name + ");\n", _this.TAB * 3);
+                serializeMethod += padString("s.Serialize(\"" + field.name + "\", " + field.name + "." + field.name + ");\n", _this.TAB * 3);
             }
             else {
-                serializeMethod += _this.padString("if (this->bToJson) {\n", _this.TAB * 3);
+                serializeMethod += padString("if (this->bToJson) {\n", _this.TAB * 3);
                 var tabSize = _this.TAB * 4;
                 if (field.dimensionality > 0) {
                     tabSize = _this.TAB * 5;
-                    serializeMethod += _this.padString("std::vector<std::string> enumValues;\n", _this.TAB * 4);
-                    serializeMethod += _this.padString("for (int i = 0; i < " + field.name + "." + field.name + ".size(); i++) {\n", _this.TAB * 4);
+                    serializeMethod += padString("std::vector<std::string> enumValues;\n", _this.TAB * 4);
+                    serializeMethod += padString("for (int i = 0; i < " + field.name + "." + field.name + ".size(); i++) {\n", _this.TAB * 4);
                 }
                 serializeMethod += _this.mapEnumValueToString(field, fieldIdentifier, tabSize, fieldIdentifier + "StrArray", (field.dimensionality == 0) ? fieldIdentifier + "StrArray[" + field.name + "." + field.name + "]" : fieldIdentifier + "StrArray[" + field.name + "." + field.name + "[j]]");
                 if (field.dimensionality > 0) {
-                    serializeMethod += _this.padString("enumValues.push_back(" + fieldIdentifier + "StrArray[" + field.typeIdentifier.name + "enumIndex]);\n", tabSize);
-                    serializeMethod += _this.padString("}\n", _this.TAB * 4);
+                    serializeMethod += padString("enumValues.push_back(" + fieldIdentifier + "StrArray[" + field.typeIdentifier.name + "enumIndex]);\n", tabSize);
+                    serializeMethod += padString("}\n", _this.TAB * 4);
                 }
                 serializeMethod += (field.dimensionality == 0) ?
-                    _this.padString("s.Serialize(\"" + field.name + "\"," + fieldIdentifier + "StrArray[" + field.name + "." + field.name + "]);\n", tabSize) :
-                    _this.padString("s.Serialize(\"" + field.name + "." + field.name + "\", enumValues);\n", tabSize);
-                serializeMethod += _this.padString("}\n", _this.TAB * 3);
-                serializeMethod += _this.padString("else {\n", _this.TAB * 3);
+                    padString("s.Serialize(\"" + field.name + "\"," + fieldIdentifier + "StrArray[" + field.name + "." + field.name + "]);\n", tabSize) :
+                    padString("s.Serialize(\"" + field.name + "." + field.name + "\", enumValues);\n", tabSize);
+                serializeMethod += padString("}\n", _this.TAB * 3);
+                serializeMethod += padString("else {\n", _this.TAB * 3);
                 if (field.dimensionality > 0) {
-                    serializeMethod += _this.padString("std::vector<std::string> enumValues;\n", _this.TAB * 4);
-                    serializeMethod += _this.padString("s.Serialize(\"" + field.name + "\", enumValues);\n", _this.TAB * 4);
-                    serializeMethod += _this.padString("for (int i = 0; i < enumValues.size(); i++) {\n", _this.TAB * 4);
+                    serializeMethod += padString("std::vector<std::string> enumValues;\n", _this.TAB * 4);
+                    serializeMethod += padString("s.Serialize(\"" + field.name + "\", enumValues);\n", _this.TAB * 4);
+                    serializeMethod += padString("for (int i = 0; i < enumValues.size(); i++) {\n", _this.TAB * 4);
                 }
                 else {
-                    serializeMethod += _this.padString("std::string enumValue;\n", _this.TAB * 4);
-                    serializeMethod += _this.padString("s.Serialize(\"" + field.name + "\", enumValue);\n", _this.TAB * 4);
+                    serializeMethod += padString("std::string enumValue;\n", _this.TAB * 4);
+                    serializeMethod += padString("s.Serialize(\"" + field.name + "\", enumValue);\n", _this.TAB * 4);
                 }
                 serializeMethod += _this.mapEnumValueToString(field, fieldIdentifier, tabSize, fieldIdentifier + "StrArray", (field.dimensionality == 0) ? "enumValue" : "enumValues[i]");
                 serializeMethod += (field.dimensionality == 0) ?
-                    _this.padString(field.name + "." + field.name + " = " + fieldIdentifier + "(" + fieldIdentifier + "enumIndex);\n", _this.TAB * 4) :
-                    _this.padString(field.name + "." + field.name + ".push_back(" + fieldIdentifier + "(" + fieldIdentifier + "enumIndex));\n", _this.TAB * 4);
+                    padString(field.name + "." + field.name + " = " + fieldIdentifier + "(" + fieldIdentifier + "enumIndex);\n", _this.TAB * 4) :
+                    padString(field.name + "." + field.name + ".push_back(" + fieldIdentifier + "(" + fieldIdentifier + "enumIndex));\n", _this.TAB * 4);
                 if (field.dimensionality > 0)
-                    serializeMethod += _this.padString("}\n", _this.TAB * 3);
-                serializeMethod += _this.padString("}\n", _this.TAB * 3);
+                    serializeMethod += padString("}\n", _this.TAB * 3);
+                serializeMethod += padString("}\n", _this.TAB * 3);
             }
         });
-        serializeMethod += this.padString("};\n\n", this.TAB * 2);
-        var serdeMethodFromJson = this.padString("bool fromJson(const char* json) {\n", this.TAB * 2);
-        serdeMethodFromJson += this.padString("Json::Value  root;\n\n", this.TAB * 3);
-        serdeMethodFromJson += this.padString("Json::Reader reader;\n", this.TAB * 3);
-        serdeMethodFromJson += this.padString("if (!reader.parse(json, root)) {}\n\n", this.TAB * 3);
+        serializeMethod += padString("};\n\n", this.TAB * 2);
+        var serdeMethodFromJson = padString("bool fromJson(const char* json) {\n", this.TAB * 2);
+        serdeMethodFromJson += padString("Json::Value  root;\n\n", this.TAB * 3);
+        serdeMethodFromJson += padString("Json::Reader reader;\n", this.TAB * 3);
+        serdeMethodFromJson += padString("if (!reader.parse(json, root)) {}\n\n", this.TAB * 3);
         fields.forEach(function (field) {
-            serdeMethodFromJson += _this.padString("if (!root.isMember(\"" + field.name + "\")) {\n", _this.TAB * 3);
-            serdeMethodFromJson += _this.padString("if (!this->" + field.name + ".optional) {\n", _this.TAB * 4);
-            serdeMethodFromJson += _this.padString("return false;\n", _this.TAB * 5);
-            serdeMethodFromJson += _this.padString("}\n", _this.TAB * 4);
-            serdeMethodFromJson += _this.padString("}\n", _this.TAB * 3);
+            serdeMethodFromJson += padString("if (!root.isMember(\"" + field.name + "\")) {\n", _this.TAB * 3);
+            serdeMethodFromJson += padString("if (!this->" + field.name + ".optional) {\n", _this.TAB * 4);
+            serdeMethodFromJson += padString("return false;\n", _this.TAB * 5);
+            serdeMethodFromJson += padString("}\n", _this.TAB * 4);
+            serdeMethodFromJson += padString("}\n", _this.TAB * 3);
         });
-        serdeMethodFromJson += this.padString("this->bToJson = false;\n", this.TAB * 3);
-        serdeMethodFromJson += this.padString("JsonSerializer s(false);\n", this.TAB * 3);
-        serdeMethodFromJson += this.padString("s.JsonValue = root;\n", this.TAB * 3);
-        serdeMethodFromJson += this.padString("this->Serialize(s);\n", this.TAB * 3);
-        serdeMethodFromJson += this.padString("return true;\n", this.TAB * 3);
-        serdeMethodFromJson += this.padString("};\n\n", this.TAB * 2);
-        var serdeMethodToJson = this.padString("Json::Value toJson() {\n", this.TAB * 2);
-        serdeMethodToJson += this.padString("JsonSerializer s(true);\n", this.TAB * 3);
-        serdeMethodToJson += this.padString("this->bToJson = true;\n", this.TAB * 3);
+        serdeMethodFromJson += padString("this->bToJson = false;\n", this.TAB * 3);
+        serdeMethodFromJson += padString("JsonSerializer s(false);\n", this.TAB * 3);
+        serdeMethodFromJson += padString("s.JsonValue = root;\n", this.TAB * 3);
+        serdeMethodFromJson += padString("this->Serialize(s);\n", this.TAB * 3);
+        serdeMethodFromJson += padString("return true;\n", this.TAB * 3);
+        serdeMethodFromJson += padString("};\n\n", this.TAB * 2);
+        var serdeMethodToJson = padString("Json::Value toJson() {\n", this.TAB * 2);
+        serdeMethodToJson += padString("JsonSerializer s(true);\n", this.TAB * 3);
+        serdeMethodToJson += padString("this->bToJson = true;\n", this.TAB * 3);
         fields.forEach(function (field) {
             var fieldIdentifier = field.typeIdentifier.name;
             if (_this.primitiveMap.has(fieldIdentifier) || (_this.UDTs.has(fieldIdentifier) && _this.UDTs.get(fieldIdentifier) != "enum")) {
-                serdeMethodToJson += _this.padString("s.Serialize(\"" + field.name + "\", " + field.name + "." + field.name + ");\n", _this.TAB * 3);
+                serdeMethodToJson += padString("s.Serialize(\"" + field.name + "\", " + field.name + "." + field.name + ");\n", _this.TAB * 3);
             }
             else {
                 if (field.dimensionality == 0) {
-                    serdeMethodToJson += _this.padString("s.Serialize(\"" + field.name + "\", " + field.typeIdentifier.name + "StrArray[" + field.name + "." + field.name + "]);\n", _this.TAB * 3);
+                    serdeMethodToJson += padString("s.Serialize(\"" + field.name + "\", " + field.typeIdentifier.name + "StrArray[" + field.name + "." + field.name + "]);\n", _this.TAB * 3);
                 }
                 else {
-                    serdeMethodToJson += _this.padString("std::vector<std::string> enumStrings;\n", _this.TAB * 3);
-                    serdeMethodToJson += _this.padString("for (int i = 0; i < " + field.name + "." + field.name + ".size(); i++) {", _this.TAB * 3);
-                    serdeMethodToJson += _this.padString("enumStrings.push_back(" + field.typeIdentifier.name + "StrArray[" + field.name + "." + field.name + "[i]]);", _this.TAB * 4);
-                    serdeMethodToJson += _this.padString("}", _this.TAB * 3);
-                    serdeMethodToJson += _this.padString("s.Serialize(\"" + field.name + "\", enumStrings);\n", _this.TAB * 3);
+                    serdeMethodToJson += padString("std::vector<std::string> enumStrings;\n", _this.TAB * 3);
+                    serdeMethodToJson += padString("for (int i = 0; i < " + field.name + "." + field.name + ".size(); i++) {", _this.TAB * 3);
+                    serdeMethodToJson += padString("enumStrings.push_back(" + field.typeIdentifier.name + "StrArray[" + field.name + "." + field.name + "[i]]);", _this.TAB * 4);
+                    serdeMethodToJson += padString("}", _this.TAB * 3);
+                    serdeMethodToJson += padString("s.Serialize(\"" + field.name + "\", enumStrings);\n", _this.TAB * 3);
                 }
             }
         });
-        serdeMethodToJson += this.padString("return s.JsonValue;\n", this.TAB * 3);
-        serdeMethodToJson += this.padString("}\n", this.TAB * 2);
+        serdeMethodToJson += padString("return s.JsonValue;\n", this.TAB * 3);
+        serdeMethodToJson += padString("}\n", this.TAB * 2);
         return serializeMethod + serdeMethodFromJson + serdeMethodToJson;
     };
     CppGenerator.prototype.resolveType = function (typeIdentifier) {

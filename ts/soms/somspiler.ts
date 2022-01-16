@@ -106,8 +106,44 @@ export class Somspiler {
         };
     }
 
+    static checkReferences(pkg: SomsPackage, packages: SomsPackage[]) : void {
+        // make sure all imported packages exist and are imported exactly once
+        Object.keys(pkg.packageImportAliases).map(k => {
+            const path = pkg.packageImportAliases[k].join("/");
+            const matches = packages.filter(p => p.path.join("/") === path);
+            if(matches.length < 1) {
+                throw new Error(`Package ${path} imported in package ${pkg.path.join("/")} not found.`);
+            }
+            if(matches.length > 1) {
+                throw new Error(`More than one package ${path} imported in package ${pkg.path.join("/")} found.`);
+            }
+        });
+
+        // make sure all imported package members exist and are imported exactly once
+        Object.keys(pkg.packageMemberImportAliases).map(k => {
+            const address = pkg.packageMemberImportAliases[k];
+            const path = address.packagePath.join("/");
+            const enumMatches = packages
+                .filter(p => p.path.join("/") === path)
+                .map(p => p.enums.filter(e => e.name === path))
+                .reduce((acc, cur) => acc.concat(cur));
+            const classMatches = packages
+                .filter(p => p.path.join("/") === path)
+                .map(p => p.classes.filter(c => c.name === address.packageMemberName))
+                .reduce((acc, cur) => acc.concat(cur));
+            if(enumMatches.length + classMatches.length < 1) {
+                throw new Error(`Package member ${path}/${address.packageMemberName} imported in package ${pkg.path.join("/")} not found.`);
+            }
+            if(enumMatches.length + classMatches.length > 1) {
+                throw new Error(`Found ${enumMatches.length} enums and ${classMatches.length} classes named ${path}/${address.packageMemberName} imported in package ${pkg.path.join("/")}.`);
+            }
+        });
+
+        // check for cycles
+    }
+
     public somspile() : SomsPackage[] {
-        return this.sources.map(
+        const packages = this.sources.map(
             s => {
                 return Somspiler.handleProgram(
                     ts.parse(s.source, {ecmaVersion: 6, sourceType: "module"}),
@@ -115,6 +151,10 @@ export class Somspiler {
                 );
             }
         );
+
+        packages.map(p => Somspiler.checkReferences(p, packages));
+
+        return packages;
     }
 
     static handleProgram(p: TSESTree.Program, packageSource: PackageSource)
@@ -315,7 +355,7 @@ export class Somspiler {
         if(piEntries.length > 1) {
             throw new Error(
                 `Package ${packageName} is imported twice, as ${JSON.stringify(piEntries.map(e => e[0]))}. `
-                + "Please import packages once."
+                + "Please import don't import packages more than once."
             );
         }
 

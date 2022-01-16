@@ -58,10 +58,45 @@ var Somspiler = /** @class */ (function () {
             packagePath: Somspiler.resolveImportPackage(s.filename.replace(new RegExp(cfg.packageRoot + "/*"), ""), [])
         };
     };
+    Somspiler.checkReferences = function (pkg, packages) {
+        // make sure all imported packages exist and are imported exactly once
+        Object.keys(pkg.packageImportAliases).map(function (k) {
+            var path = pkg.packageImportAliases[k].join("/");
+            var matches = packages.filter(function (p) { return p.path.join("/") === path; });
+            if (matches.length < 1) {
+                throw new Error("Package " + path + " imported in package " + pkg.path.join("/") + " not found.");
+            }
+            if (matches.length > 1) {
+                throw new Error("More than one package " + path + " imported in package " + pkg.path.join("/") + " found.");
+            }
+        });
+        // make sure all imported package members exist and are imported exactly once
+        Object.keys(pkg.packageMemberImportAliases).map(function (k) {
+            var address = pkg.packageMemberImportAliases[k];
+            var path = address.packagePath.join("/");
+            var enumMatches = packages
+                .filter(function (p) { return p.path.join("/") === path; })
+                .map(function (p) { return p.enums.filter(function (e) { return e.name === path; }); })
+                .reduce(function (acc, cur) { return acc.concat(cur); });
+            var classMatches = packages
+                .filter(function (p) { return p.path.join("/") === path; })
+                .map(function (p) { return p.classes.filter(function (c) { return c.name === address.packageMemberName; }); })
+                .reduce(function (acc, cur) { return acc.concat(cur); });
+            if (enumMatches.length + classMatches.length < 1) {
+                throw new Error("Package member " + path + "/" + address.packageMemberName + " imported in package " + pkg.path.join("/") + " not found.");
+            }
+            if (enumMatches.length + classMatches.length > 1) {
+                throw new Error("Found " + enumMatches.length + " enums and " + classMatches.length + " classes named " + path + "/" + address.packageMemberName + " imported in package " + pkg.path.join("/") + ".");
+            }
+        });
+        // check for cycles
+    };
     Somspiler.prototype.somspile = function () {
-        return this.sources.map(function (s) {
+        var packages = this.sources.map(function (s) {
             return Somspiler.handleProgram(ts.parse(s.source, { ecmaVersion: 6, sourceType: "module" }), s);
         });
+        packages.map(function (p) { return Somspiler.checkReferences(p, packages); });
+        return packages;
     };
     Somspiler.handleProgram = function (p, packageSource) {
         var enums = [];
@@ -208,7 +243,7 @@ var Somspiler = /** @class */ (function () {
             .map(function (s) { return [s.local.name, packagePath]; });
         if (piEntries.length > 1) {
             throw new Error("Package " + packageName + " is imported twice, as " + JSON.stringify(piEntries.map(function (e) { return e[0]; })) + ". "
-                + "Please import packages once.");
+                + "Please import don't import packages more than once.");
         }
         piEntries.forEach(function (e) { return packageImportAliases[e[0]] = e[1]; });
         var pmiEntries = d.specifiers
