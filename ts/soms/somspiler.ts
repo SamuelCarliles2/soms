@@ -106,40 +106,45 @@ export class Somspiler {
         };
     }
 
-    static checkReferences(pkg: SomsPackage, packages: SomsPackage[]) : void {
-        // make sure all imported packages exist and are imported exactly once
-        Object.keys(pkg.packageImportAliases).map(k => {
-            const path = pkg.packageImportAliases[k].join("/");
-            const matches = packages.filter(p => p.path.join("/") === path);
-            if(matches.length < 1) {
-                throw new Error(`Package ${path} imported in package ${pkg.path.join("/")} not found.`);
-            }
-            if(matches.length > 1) {
-                throw new Error(`More than one package ${path} imported in package ${pkg.path.join("/")} found.`);
-            }
-        });
+    static checkReferenceShenanigans(pkgMap: Map<string, SomsPackage>, pkg?: SomsPackage, pathStack?: string[]) : void {
+        if(!pkg) {
+            pkgMap.forEach(p => Somspiler.checkReferenceShenanigans(pkgMap, p, [p.path.join("/")]));
+        }
+        else {
+            const pthStack: string[] = pathStack ? pathStack : [];
+            const pkgs = Object.keys(pkg.packageImportAliases).map(k => pkg.packageImportAliases[k]);
+            const memberPkgs = Object.keys(pkg.packageMemberImportAliases).map(k => pkg.packageMemberImportAliases[k].packagePath);
+            const children = pkgs.concat(memberPkgs);
 
-        // make sure all imported package members exist and are imported exactly once
-        Object.keys(pkg.packageMemberImportAliases).map(k => {
-            const address = pkg.packageMemberImportAliases[k];
-            const path = address.packagePath.join("/");
-            const enumMatches = packages
-                .filter(p => p.path.join("/") === path)
-                .map(p => p.enums.filter(e => e.name === path))
-                .reduce((acc, cur) => acc.concat(cur));
-            const classMatches = packages
-                .filter(p => p.path.join("/") === path)
-                .map(p => p.classes.filter(c => c.name === address.packageMemberName))
-                .reduce((acc, cur) => acc.concat(cur));
-            if(enumMatches.length + classMatches.length < 1) {
-                throw new Error(`Package member ${path}/${address.packageMemberName} imported in package ${pkg.path.join("/")} not found.`);
-            }
-            if(enumMatches.length + classMatches.length > 1) {
-                throw new Error(`Found ${enumMatches.length} enums and ${classMatches.length} classes named ${path}/${address.packageMemberName} imported in package ${pkg.path.join("/")}.`);
-            }
-        });
+            // check for imported member existence
+            Object.keys(pkg.packageMemberImportAliases).map(k => {
+                const addr = pkg.packageMemberImportAliases[k];
+                const pth = addr.packagePath.join("/");
 
-        // check for cycles
+                if(!(pkgMap.get(pth)?.enums.filter(e => e.name === addr.packageMemberName).length
+                    || pkgMap.get(pth)?.classes.filter(c => c.name === addr.packageMemberName).length)
+                ) {
+                    throw new Error(`Can't find anything about any package member ${pth}/${addr.packageMemberName}.`);
+                }
+            });
+
+            children.forEach(c => {
+                const pth = c.join("/");
+                const childPkg = pkgMap.get(pth);
+
+                // check for childPkg existence
+                if(!childPkg) {
+                    throw new Error(`Can't find anything about any ${pth} package.`);
+                }
+
+                // check for cyclic dependencies
+                if(pthStack.includes(pth)) {
+                    throw new Error(`Cyclic dependency involving ${pkg.path.join("/")} and ${c}.`);
+                }
+
+                Somspiler.checkReferenceShenanigans(pkgMap, childPkg, pthStack.concat(pth));
+            });
+        }
     }
 
     public somspile() : SomsPackage[] {
@@ -152,7 +157,17 @@ export class Somspiler {
             }
         );
 
-        packages.map(p => Somspiler.checkReferences(p, packages));
+        const pkgMap = new Map<string, SomsPackage>();
+        packages.forEach(p => {
+            const pth = p.path.join("/");
+
+            if(pkgMap.has(pth)) {
+                throw new Error(`Package ${pth} occurs twice.`);
+            }
+
+            pkgMap.set(p.path.join("/"), p);
+        });
+        Somspiler.checkReferenceShenanigans(pkgMap);
 
         return packages;
     }
